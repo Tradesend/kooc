@@ -5,7 +5,7 @@
 ** Login   <moran-_d@epitech.net>
 ** 
 ** Started on  Wed Sep 30 12:03:21 2015 moran-_d
-   Last update Wed Sep 30 13:38:18 2015 moran-_d
+** Last update Wed Sep 30 14:33:25 2015 moran-_d
 */
 
 // accessibility : private, public, protected, internal (namespace direct)
@@ -14,7 +14,7 @@ extern int VAR;
 
 @namespace Geometry
 {
-  extern int VAR;
+  int VAR = 43;
 
   @class Point()
     { /* devine */ }
