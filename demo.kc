@@ -5,7 +5,7 @@
 ** Login   <moran-_d@epitech.net>
 ** 
 ** Started on  Wed Sep 30 12:01:39 2015 moran-_d
-** Last update Wed Sep 30 12:57:00 2015 moran-_d
+** Last update Wed Sep 30 14:02:12 2015 moran-_d
 */
 
 /*
@@ -19,14 +19,19 @@ id@ : namespace
 
 MANGLING :
 
-___NAMESPACE__CLASS__FUNCNAME__[TYPARG__]+RETTYPE
+___NAMESPACE__CLASS__SYMTYPE__SYMNAME[__[TYPARG__]+_RETTYPE]?
 
  */
 
 @import("demo.h")
 
+int VAR = 42;
+
 @namespace Geometry
 {
+
+  int VAR = 43;
+
   @implementation Rectangle
     {
       @ctor(int tl1, int tl2, int w, int h)
@@ -63,7 +68,7 @@ ___NAMESPACE__CLASS__FUNCNAME__[TYPARG__]+RETTYPE
 
 int main(int argc, char **argv)
 {
-  Geometry@Rectangle rec = @new Geometry@Rectangle(74, 65, 10, 12);
+  Geometry@Rectangle rec = @new Geometry@Rectangle(74, 65, VAR, Geometry@VAR);
   Geometry@Point corner = @get(rec, topLeftCorner);
   Geometry@Point mid = rec@findMiddle();
   @set(rec, topLeftCorner, mid);
