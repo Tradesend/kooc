@@ -1,6 +1,0 @@
-@module A
-{
-  int	function(void);
-  double	function(void);
-  int	function(int);
-}
