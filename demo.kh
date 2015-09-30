@@ -1,0 +1,38 @@
+/*
+** demo.h for demo in /home/moran-_d/rendu/kooc
+** 
+** Made by moran-_d
+** Login   <moran-_d@epitech.net>
+** 
+** Started on  Wed Sep 30 12:03:21 2015 moran-_d
+** Last update Wed Sep 30 12:41:03 2015 moran-_d
+*/
+
+// accessibility : private, public, protected, internal (namespace direct)
+
+@namespace Geometry
+{
+
+  @class Point()
+    { /* devine */ }
+
+  @class Rectangle()
+    {
+      Point topLeftCorner @(get:public, set:public);
+      int width @(); // = par defaut : get public, set private
+      int height @();
+      
+      @ctor(int, int, int, int) @(); // default : public
+      @ctor(Point, int, int) @(protected);
+
+      @dtor() @();
+
+      Point findMiddle();
+    }
+
+  @class Carre(Rectangle)
+  {
+    @ctor(int, int int) @();
+  }
+}
+
