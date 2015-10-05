@@ -1,7 +1,9 @@
 __author__ = 'collio_v'
 
 from rules.importing import Import
-import nodes
+from pyrser import grammar
 
-class Kooc(Import):
+
+class Kooc(grammar.Grammar, Import):
+    entry = "translation_unit"
     pass
