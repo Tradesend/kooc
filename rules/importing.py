@@ -3,7 +3,7 @@ from cnorm.parsing import declaration
 import nodes
 
 
-class Import(grammar.Grammar, declaration.Declaration):
+class Import(grammar.Grammar):
     entry = 'translation_unit'
     grammar = """
         preproc_decl = [ kooc_import | Declaration.preproc_decl ]
