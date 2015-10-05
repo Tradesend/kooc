@@ -1,9 +1,11 @@
 __author__ = 'collio_v'
 
 from rules import importing
+from cnorm.passes import to_c
+from cnorm import nodes
 
 cooker = importing.Import()
 print(cooker.parse("""
 #include "toto.h"
-@import(toto)
-"""))
+@import(./toto)
+""").to_c())
