@@ -5,6 +5,9 @@ from cnorm.passes import to_c
 
 cooker = Kooc()
 print(cooker.parse("""
-#include "toto.h"
-@import(./toto)
-""").to_c())
+@namespace(toto){
+    @namespace(titi) {
+        int main();
+    }
+}
+""").to_yml())
