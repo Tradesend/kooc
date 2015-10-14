@@ -15,6 +15,7 @@ typedef int toto;
 @namespace(toto){
     @namespace(titi) {
         int main();
+        int toto = 5;
     }
     int main();
     typedef int toto;
