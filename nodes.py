@@ -10,6 +10,7 @@ class Imp(parsing.Node):
 class Nmspce(nodes.BlockStmt):
     def __init__(self, name: str) -> object:
         nodes.BlockStmt.__init__(self, [])
+        self.types = {}
         self.name = name
 
 

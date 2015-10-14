@@ -11,11 +11,14 @@ cooker = Kooc()
 
 information.File.name = "test.kc"
 res = cooker.parse("""
+typedef int toto;
 @namespace(toto){
     @namespace(titi) {
         int main();
     }
+    int main();
+    typedef int toto;
 }
 """)
 
-res.kooc_resolution(res)
+print(res.kooc_resolution(res))

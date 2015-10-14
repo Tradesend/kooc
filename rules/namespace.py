@@ -12,7 +12,7 @@ class Namespace(grammar.Grammar):
         declaration = [
                         "@namespace(" id:namespace_name ')'
                         #make_namespace(namespace_name, current_block)
-                        '{' declaration '}'
+                        '{' [ declaration ]* '}'
                         #depile_context(current_block)
                         ]
     """
@@ -29,6 +29,8 @@ def make_namespace(self: Namespace, namespace_name, current_block) -> bool:
 
 @meta.hook(Namespace)
 def depile_context(self: Namespace, current_block):
+
+    current_block.ref.types = [_key for _key, _value in current_block.ref.types.items()]
     current_block.pile[0].body.append(current_block.ref)
     current_block.ref = current_block.pile[0]
     current_block.pile = current_block.pile[1:len(current_block.pile)]
