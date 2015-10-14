@@ -173,6 +173,22 @@
 %       Mangling
 %----------------------------------------------------------------------------------------
 
+\begin{Feature}[Mangling]
+  \begin{FeatureSection}[What]
+    Mangling is a technique used to avoid many problem on unique names resolution.
+    Mangling will modify the name following some pattern in order to avoid name collisions.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Code Equivalence]
+    \KoocHeader{mangling}{ various examples in Kooc }
+    \CHeader{mangling}{ various examples in C }
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    \_\_\_[\{nb\}NAMESPACE\_\_]*[\{nb\}CLASS\_\_]?\{nb\}SYMTYPE\_\_\{nb\}SYMNAME[\_\_[\{nb\}TYPARG\_\_]*\{nb\}RETTYPE]?\_\_ \newline
+    \{nb\} = len(word) \newline
+    we mangle with all the namespaces, the class if present. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. Then, if it's a function, we also mangle with every argument's type, and the return type.
+  \end{FeatureSection}
+\end{Feature}
+\clearpage
 
 %----------------------------------------------------------------------------------------
 %	Import
@@ -199,7 +215,6 @@
 \begin{Feature}[Namespace]
   \begin{FeatureSection}[What]
     The purpose of a namespace is to define sub context for declaration of variables, functions
-    In our Kooc interpretation, the definition of a namespace (called 'module' in the subject) is @namespace(NAME)\{\}, and its implementation is @definition(NAME)\{\}
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{namespace}{ Namespace demo in Kooc header }
@@ -208,9 +223,30 @@
     \CCode{namespace}{ Namespace translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    \lipsum[1] 
+    The definition of a namespace (called 'module' in the subject) is @namespace(NAME)\{\}, and its implementation is @definition(NAME)\{\}
   \end{FeatureSection}
 \end{Feature}
+\clearpage
+
+%----------------------------------------------------------------------------------------
+%	Class
+%----------------------------------------------------------------------------------------
+
+\begin{Feature}[Class]
+  \begin{FeatureSection}[What]
+    A class is an object containing variables and methods. Inheritance and polymorphism is a possibility of classes.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Code Equivalence]
+    \KoocHeader{class}{ Class demo in Kooc header }
+    \CHeader{class}{ Class translation in C header }    
+    \KoocCode{class}{ Class demo in Kooc code }
+    \CCode{class}{ Class translation in C code }
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    The definition of a class is @class(NAME)\{\}, and its implementation is @implementation(NAME)\{\}
+  \end{FeatureSection}
+\end{Feature}
+\clearpage
 
 %----------------------------------------------------------------------------------------
 

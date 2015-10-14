@@ -1,0 +1,36 @@
+@implementation(Rectangle) {
+  @ctor(int tl1, int tl2, int w, int h) {
+    @set(@this, topLeftCorner, @new(Point)(tl1, tl2));
+    @set(@this, width, w);
+    @set(@this, height, h);    
+  }
+
+  @ctor(Point tl, int w, int h) {
+    @set(@this, topLeftCorner, tl);
+    @set(@this, width, w);
+    @set(@this, height, h);    
+  }
+
+  @dtor() {
+  }
+
+  Point findMiddle() {
+    return (@new(Point)(@get(tl, x) + @get(@this, w / 2),
+                        @get(tl, y) + @get(@this, h / 2)
+                       ));
+  }
+}
+
+@implementation(Carre) {
+  @ctor(int tl1, int tl2, int side) {
+    @super(tl1, tl2, side, side);
+  }
+}
+
+int main() {
+  Rectangle rec = @new(Rectangle)(42, 42, 42, 24);
+  Point corner = @get(rec, topLeftCorner);
+  Point mid = @call(@call(rec, findMiddle()), clonePoint());
+  @set(rec, topLeftCorner, mid);
+  @delete(Rectangle)(rec);  
+}

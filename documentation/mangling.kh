@@ -1,0 +1,9 @@
+int NAME;
+char NAME;
+bool NAME(int, int);
+
+@namespace NAME {
+  @namespace EMAN {
+    int NAME;
+  }
+}

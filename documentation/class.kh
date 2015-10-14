@@ -1,0 +1,20 @@
+@class Point() { ... }
+
+@class Rectangle()
+  {
+    Point topLeftCorner @access(get:public, set:public);
+    int width @access(); /* default=> get:public, set:private */
+    int height @access();
+
+    @ctor(int, int, int, int) @access(); // default=> public
+    @ctor(Point, int, int) @access(private);
+
+    @dtor() @access();
+
+    Point findMiddle() @access(public, static);
+  }
+
+@class Carre(Rectangle)
+{
+  @ctor(int, int int) @();
+}

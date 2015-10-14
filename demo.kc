@@ -5,21 +5,29 @@
 ** Login   <moran-_d@epitech.net>
 ** 
 ** Started on  Wed Sep 30 12:01:39 2015 moran-_d
-** Last update Wed Sep 30 15:12:50 2015 moran-_d
+   Last update Wed Oct  7 17:56:43 2015 moran-_d
 */
 
 /*
 
  @keyword : keyword
-id@ : namespace
+id[@id]+ : namespace
 
-@set(Class, Field, Val)
-@get(Class, Field)
-
+@set(Objet, Field, Val)
+@get(Objet, Field)
 
 MANGLING :
 ___{nb}NAMESPACE__{nb}CLASS__{nb}SYMTYPE__{nb}SYMNAME[__[{nb}TYPARG__]+_{nb}RETTYPE]?
 {nb} = nb of char per word
+
+Préciser Infference type
+class
+{
+	int a;
+	string a;
+}
+
+
 
  */
 
@@ -27,15 +35,15 @@ ___{nb}NAMESPACE__{nb}CLASS__{nb}SYMTYPE__{nb}SYMNAME[__[{nb}TYPARG__]+_{nb}RETT
 
 int VAR = 42;
 
-@implementation Geometry
+@definition(Geometry) // def = namespace
 {
   // int VAR = 43 defini in .kh
 
-  @implementation Rectangle
+  @implementation(Rectangle) // impl = class
     {
       @ctor(int tl1, int tl2, int w, int h)
 	{
-	  @set(@this, topLeftCorner, @new Point(tl1, tl2));
+	  @set(@this, topLeftCorner, @new(Point)(tl1, tl2);
 	  @set(@this, width, w);
 	  @set(@this, height, h);
 	}
@@ -52,11 +60,11 @@ int VAR = 42;
       
       Point findMiddle()
         {
-	  return(@new Point(tl.x + w / 2, tl.y + h / 2));
+	  return(@new(Point)(tl.x + w / 2, tl.y + h / 2));
         }
     }
 
-  @implementation Carre
+  @implementation(Carre)
     {
       @ctor(int tl1, int tl2, int s)
 	{
@@ -67,17 +75,22 @@ int VAR = 42;
 
 Geometry@Rectangle getShape()
 {
-  return ...;
+  return(@new(Geometry@Rectangle)(10, 10, 10, 10));
 }
 
 int main(int argc, char **argv)
 {
-  Geometry@Rectangle rec = @new Geometry@Rectangle(74, 65, VAR, Geometry@VAR);
+  Geometry@Rectangle rec = @new(Geometry@Rectangle)(74, 65, VAR, Geometry@VAR);
   Geometry@Point corner = @get(rec, topLeftCorner);
   Geometry@Point mid = rec@findMiddle();
   Geometry@Point mid = getShape()@findMiddle();
-  Geometry@Point mid = [[getShape() findMiddle :param1 :param2] clone];
-  Geometry@Point mid = @call(@call(getShape(), findMiddle()), clone())
+  int wid = @get(rec, width);
+  // Geometry@Point mid = [[getShape() findMiddle :param1 :param2] clone];
+
+  Geometry@Point mid = @call(@call(getShape(), findMiddle()), clone());
+
+  magling_clone(mangling_findMiddle(getShape()));
+
   @set(rec, topLeftCorner, mid);
-  @delete Geometry@Rectangle(rec);
+  @delete(Geometry@Rectangle)(rec);
 }
