@@ -1,0 +1,4 @@
+@namespace(NAMESPACE) {
+  int VARIABLE = 5;
+  bool FUNCTION();
+}

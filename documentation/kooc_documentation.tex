@@ -72,10 +72,20 @@
   \item[]\lstinputlisting[caption=#2,label=#1]{#1.kc}
   \end{itemize}
 }
+\newcommand{\KoocHeader}[2]{ 
+  \begin{itemize}
+  \item[]\lstinputlisting[caption=#2,label=#1]{#1.kh}
+  \end{itemize}
+}
 
 \newcommand{\CCode}[2]{
   \begin{itemize}
   \item[]\lstinputlisting[caption=#2,label=#1]{#1.c}
+  \end{itemize}
+}
+\newcommand{\CHeader}[2]{
+  \begin{itemize}
+  \item[]\lstinputlisting[caption=#2,label=#1]{#1.h}
   \end{itemize}
 }
 
@@ -160,11 +170,16 @@
 \newpage
 
 %----------------------------------------------------------------------------------------
+%       Mangling
+%----------------------------------------------------------------------------------------
+
+
+%----------------------------------------------------------------------------------------
 %	Import
 %----------------------------------------------------------------------------------------
 
 \begin{Feature}[Import]
-  \begin{FeatureSection}[Why]
+  \begin{FeatureSection}[What]
     @Import Statement will be used for for safe inclusion
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
@@ -172,8 +187,7 @@
     \CCode{import}{ Import translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    No work on tree, only implemented new meta to C methodes on a custom Imp node. \newline
-    \lipsum[1]
+    No work on tree, only implemented new meta to C methods on a custom Imp node. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -183,14 +197,18 @@
 %----------------------------------------------------------------------------------------
 
 \begin{Feature}[Namespace]
-  \begin{FeatureSection}[Why]
+  \begin{FeatureSection}[What]
+    The purpose of a namespace is to define sub context for declaration of variables, functions
+    In our Kooc interpretation, the definition of a namespace (called 'module' in the subject) is @namespace(NAME)\{\}, and its implementation is @definition(NAME)\{\}
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
-    \KoocCode{import}{ Namespace demo in Kooc code }
-    \CCode{import}{ Namespace translation in C code }
+    \KoocHeader{namespace}{ Namespace demo in Kooc header }
+    \CHeader{namespace}{ Namespace translation in C header }    
+    \KoocCode{namespace}{ Namespace demo in Kooc code }
+    \CCode{namespace}{ Namespace translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    \lipsum[1]
+    \lipsum[1] 
   \end{FeatureSection}
 \end{Feature}
 

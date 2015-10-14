@@ -1,0 +1,9 @@
+@definition(NAMESPACE) {
+  bool FUNCTION() {
+    return true;
+  }
+}
+
+int main() {
+  return NAMESPACE@VARIABLE;
+}

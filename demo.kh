@@ -26,11 +26,11 @@ extern int VAR;
       int height @();
       
       @ctor(int, int, int, int) @(); // default : public
-      @ctor(Point, int, int) @(protected);
+      @ctor(Point, int, int) @();
 
       @dtor() @();
 
-      Point findMiddle();
+      Point findMiddle() @access(static);
     }
 
   @class Carre(Rectangle)
