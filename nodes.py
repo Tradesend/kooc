@@ -15,5 +15,8 @@ class Nmspce(nodes.BlockStmt):
 
 @meta.add_method(Imp)
 def to_c(self: Imp):
-    return "#ifndef __{0}\n# define __{1}\n# include \"{2}.h\"\n#endif\n".format(
-        self.value.replace('/', '_').replace('.', '_'), self.value.replace('.', '_').replace('/', '_'), self.value)
+    return "#ifndef __{0}\n# define __{1}\n# include \"{2}.h\"\n#endif\n"\
+        .format(
+        self.value.replace('/', '_').replace('.', '_'),
+        self.value.replace('.', '_').replace('/', '_'),
+        self.value)

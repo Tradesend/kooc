@@ -7,7 +7,7 @@ import nodes
 
 
 class Namespace(grammar.Grammar):
-    entry = "trnaslation_unit"
+    entry = "translation_unit"
     grammar = """
         declaration = [
                         "@namespace(" id:namespace_name ')'
@@ -32,5 +32,4 @@ def depile_context(self: Namespace, current_block):
     current_block.pile[0].body.append(current_block.ref)
     current_block.ref = current_block.pile[0]
     current_block.pile = current_block.pile[1:len(current_block.pile)]
-    print(current_block.to_yml())
     return True
