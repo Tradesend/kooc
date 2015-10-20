@@ -18,6 +18,11 @@ class Defn(nodes.BlockStmt):
         nodes.BlockStmt.__init__(self, [])
         self.name = name
 
+class KoocId(nodes.Id):
+    def __init__(self):
+        nodes.Id.__init__(self, "")
+        self.scope = []
+
 
 @meta.add_method(Imp)
 def to_c(self: Imp):

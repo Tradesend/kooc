@@ -13,4 +13,5 @@ os.chdir(os.path.dirname(os.path.abspath(sys.argv[1])))
 information.File.name = sys.argv[1]
 res = cooker.parse_file(filename)
 
+print(res)
 print(res.kooc_resolution(res).to_c())

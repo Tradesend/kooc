@@ -1,3 +1,4 @@
-@namespace(toto) {
+@namespace(NAMESPACE) {
     int toto = 5;
+    int methode();
 }

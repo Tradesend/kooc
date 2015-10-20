@@ -152,11 +152,23 @@ def kooc_resolution(self: nodes.Nmspce, ast: cnorm.nodes.BlockStmt, _mangler: ma
 
 @meta.add_method(nodes.Defn)
 def kooc_resolution(self: nodes.Defn, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
-    global nm
     new_mangler = copy.copy(_mangler)
     new_mangler.enable()
     new_mangler.container(self.name)
-    namespace = ast.search_in_tree(lambda namespace, parents: namespace if isinstance(namespace, nodes.Nmspce) and namespace.name == self.name and parents == parents else None)
+    namespace = ast.search_in_tree(lambda namespace, parents: namespace if isinstance(namespace,
+                                                                                      nodes.Nmspce) and namespace.name == self.name and parents == parents else None)
     self.body = namespace.body + self.body
     _kooc_resolution(self, ast, new_mangler, parents)
-    return self.body;
+    return self.body
+
+
+@meta.add_method(nodes.KoocId)
+def kooc_resolution(self: nodes.KoocId, ast: cnorm.nodes.BlockStmt, _manger: mangler.Mangler, parents):
+    if len(self.scope) == 0:
+        return self
+    id_mangler = mangler.Mangler(True)
+    id_mangler.name(self.value)
+    for container in self.scope:
+        id_mangler.container(container)
+    self.value = id_mangler.mangle("container", "name")
+    return self

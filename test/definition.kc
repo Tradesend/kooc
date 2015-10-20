@@ -1,5 +1,13 @@
 @import(namespace)
 
-@definition(toto) {
-    int main() {}
+@definition(NAMESPACE) {
+    int methode() {
+        int toto;
+    }
+}
+
+int main() {
+    int toto;
+
+    toto = NAMESPACE /* test */@ toto ;
 }
