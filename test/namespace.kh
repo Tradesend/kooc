@@ -1,0 +1,6 @@
+@namespace(toto) {
+    int toto;
+    int main() {
+
+    }
+}

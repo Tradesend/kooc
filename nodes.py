@@ -13,6 +13,11 @@ class Nmspce(nodes.BlockStmt):
         self.types = {}
         self.name = name
 
+class Defn(nodes.BlockStmt):
+    def __init__(self, name: str) -> object:
+        nodes.BlockStmt.__init__(self, [])
+        self.types = {}
+        self.name = name
 
 @meta.add_method(Imp)
 def to_c(self: Imp):

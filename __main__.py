@@ -1,7 +1,7 @@
 
 __author__ = 'collio_v'
 
-import sys
+import os, sys
 from kooc import Kooc
 from compiler import information
 from cnorm.passes import to_c
@@ -9,17 +9,9 @@ from ast import resolution
 
 cooker = Kooc()
 
-information.File.name = "test.kc"
-res = cooker.parse("""
-typedef int toto;
-@namespace(toto){
-    @namespace(titi) {
-        int main();
-        int toto = 5;
-    }
-    int main();
-    typedef int toto;
-}
-""")
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[1])))
+information.File.name = sys.argv[1]
+res = cooker.parse_file(sys.argv[1])
 
-print(res.kooc_resolution(res))
+print(res)
+print(res.kooc_resolution(res).to_c())

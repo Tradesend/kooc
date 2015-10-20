@@ -5,30 +5,29 @@ from pyrser import grammar, meta
 import nodes
 
 
-class Namespace(grammar.Grammar):
+class Definition(grammar.Grammar):
     entry = "translation_unit"
     grammar = """
-        declaration = [
-                        "@namespace(" id:namespace_name ')'
-                        #make_namespace(namespace_name, current_block)
-                        '{' [ declaration ]* '}'
-                        #depile_context(current_block)
-                        ]
-    """
+            declaration = [
+                "@definition(" id:definition_name ")"
+                #make_definition(definition_name, current_block)
+                '{' [ declaration ]* '}'
+                #depile_context(current_block)
+            ]
+        """
 
 
-@meta.hook(Namespace)
-def make_namespace(self: Namespace, namespace_name, current_block) -> bool:
+@meta.hook(Definition)
+def make_definition(self: Definition, definition_name, current_block) -> bool:
     if not hasattr(current_block, 'pile'):
         current_block.pile = []
     current_block.pile.insert(0, current_block.ref)
-    current_block.ref = nodes.Nmspce(self.value(namespace_name))
+    current_block.ref = nodes.Defn(self.value(definition_name))
     return True
 
 
-@meta.hook(Namespace)
-def depile_context(self: Namespace, current_block):
-
+@meta.hook(Definition)
+def depile_context(self: Definition, current_block):
     current_block.ref.types = [_key for _key, _value in current_block.ref.types.items()]
     current_block.pile[0].body.append(current_block.ref)
     current_block.ref = current_block.pile[0]

@@ -26,8 +26,8 @@ def import_directive(self: Import) -> bool:
 def validate_import(self: Import, context: parsing.Node,
                     current_block: parsing.Node, filename: parsing.Node) -> bool:
     pathname = path.abspath(self.value(filename).strip('(').strip(')'))
-    if not path.isfile(pathname + ".h"):
-        print(error.Error("imported file " + pathname + ".h doesn't exist."))
+    if not path.isfile(pathname + ".kh"):
+        print(error.Error("imported file " + pathname + ".kh doesn't exist."))
         return False
     ast = nodes.Imp(pathname)
     current_block.ref.body.append(ast)
