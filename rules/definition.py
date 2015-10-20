@@ -9,27 +9,31 @@ class Definition(grammar.Grammar):
     entry = "translation_unit"
     grammar = """
             declaration = [
-                "@definition(" id:definition_name ")"
-                #make_definition(definition_name, current_block)
+                "@definition("
+                __scope__:current_block
+                #make_definition(_, current_block)
+                 id:definition_name ")"
+                #name_definition(_, definition_name)
                 '{' [ declaration ]* '}'
-                #depile_context(current_block)
+                #depile_context(_)
             ]
         """
 
 
 @meta.hook(Definition)
-def make_definition(self: Definition, definition_name, current_block) -> bool:
-    if not hasattr(current_block, 'pile'):
-        current_block.pile = []
-    current_block.pile.insert(0, current_block.ref)
-    current_block.ref = nodes.Defn(self.value(definition_name))
+def make_definition(self: Definition, ast, current_block) -> bool:
+    ast.set(nodes.Defn(self.value("")))
+    current_block.ref = ast
+    return True
+
+
+@meta.hook(Definition)
+def name_definition(self: Definition, ast: nodes.Defn, definition_name) -> bool:
+    ast.name = self.value(definition_name)
     return True
 
 
 @meta.hook(Definition)
 def depile_context(self: Definition, current_block):
-    current_block.ref.types = [_key for _key, _value in current_block.ref.types.items()]
-    current_block.pile[0].body.append(current_block.ref)
-    current_block.ref = current_block.pile[0]
-    current_block.pile = current_block.pile[1:len(current_block.pile)]
+    self.rule_nodes.parents['current_block'].ref.body.append(current_block)
     return True

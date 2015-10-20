@@ -9,28 +9,23 @@ class Namespace(grammar.Grammar):
     entry = "translation_unit"
     grammar = """
         declaration = [
+                        __scope__:current_block
                         "@namespace(" id:namespace_name ')'
-                        #make_namespace(namespace_name, current_block)
+                        #make_namespace(_, namespace_name, current_block)
                         '{' [ declaration ]* '}'
-                        #depile_context(current_block)
+                        #depile_context(_)
                         ]
     """
 
 
 @meta.hook(Namespace)
-def make_namespace(self: Namespace, namespace_name, current_block) -> bool:
-    if not hasattr(current_block, 'pile'):
-        current_block.pile = []
-    current_block.pile.insert(0, current_block.ref)
-    current_block.ref = nodes.Nmspce(self.value(namespace_name))
+def make_namespace(self: Namespace, ast, namespace_name, current_block) -> bool:
+    ast.set(nodes.Nmspce(self.value(namespace_name)))
+    current_block.ref = ast
     return True
 
 
 @meta.hook(Namespace)
 def depile_context(self: Namespace, current_block):
-
-    current_block.ref.types = [_key for _key, _value in current_block.ref.types.items()]
-    current_block.pile[0].body.append(current_block.ref)
-    current_block.ref = current_block.pile[0]
-    current_block.pile = current_block.pile[1:len(current_block.pile)]
+    self.rule_nodes.parents['current_block'].ref.body.append(current_block)
     return True

@@ -34,17 +34,17 @@ class NodeModification:
 nm = NodeModification()
 
 
-def sub_resolution(var, ast: cnorm.nodes.BlockStmt, mangler: mangler.Mangler):
+def sub_resolution(var, ast: cnorm.nodes.BlockStmt, mangler: mangler.Mangler, parents):
     if isinstance(var, node.Node):
-        return var.kooc_resolution(ast, mangler)
+        return var.kooc_resolution(ast, mangler, parents)
     elif isinstance(var, dict):
-        return {_key: _var for _key, _var in var.items() if not sub_resolution(_var, ast, mangler)}
+        return {_key: _var for _key, _var in var.items() if not sub_resolution(_var, ast, mangler, parents)}
     elif isinstance(var, str):
-        return var;
+        return var
     elif hasattr(var, '__iter__'):
         bod = []
         for _var in var:
-            __var = sub_resolution(_var, ast, mangler)
+            __var = sub_resolution(_var, ast, mangler, parents)
             if isinstance(__var, list):
                 bod = bod + __var
             elif not (__var is None):
@@ -53,11 +53,75 @@ def sub_resolution(var, ast: cnorm.nodes.BlockStmt, mangler: mangler.Mangler):
     return var
 
 
-def _kooc_resolution(self, ast: cnorm.nodes.BlockStmt, mangler: mangler.Mangler):
+def _kooc_resolution(self, ast: cnorm.nodes.BlockStmt, mangler: mangler.Mangler, parents):
+    dellist = []
+    parents.append(self)
+    for var in vars(self):
+        if getattr(self, var) is not None:
+            _var = sub_resolution(getattr(self, var), ast, mangler, parents)
+            if _var is None:
+                dellist.append(var)
+            else:
+                setattr(self, var, _var)
+    for _del in dellist:
+        delattr(self, _del)
+    parents.pop()
+    return self
+
+
+def sub_search_in_tree(var, predicate: callable, parents: list):
+    if isinstance(var, node.Node):
+        return var.search_in_tree(predicate, parents)
+    elif isinstance(var, str):
+        return None
+    elif hasattr(var, '__iter__'):
+        for _var in var:
+            __var = sub_search_in_tree(_var, predicate, parents)
+            if __var is not None:
+                return __var
+    return None
+
+
+@meta.add_method(node.Node)
+def search_in_tree(self, predicate: callable, parents: list = list()):
+    if predicate(self, parents):
+        return self
+    parents.append(self)
+    for var in vars(self):
+        _var = sub_search_in_tree(getattr(self, var), predicate, parents)
+        if _var is not None:
+            return _var
+    parents.pop()
+    return None
+
+
+@meta.add_method(nodes.Imp)
+def search_in_tree(self: nodes.Imp, predicate: callable, parents: list):
+    if not hasattr(self, 'imported'):
+        self.imported = kooc.Kooc().parse_file('{0}.kh'.format(self.value))
+    ret = self.imported.search_in_tree(predicate)
+    if ret is None:
+        ret = node.Node.search_in_tree(self, predicate, parents)
+    return ret
+
+
+@meta.add_method(node.Node)
+def kooc_resolution(self, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler = mangler.Mangler(),
+                    parents: list = list()):
+    global nm
+    nm.use(self)
+    if hasattr(self, '_name'):
+        self._name = _mangler.name(self._name).mangle("container", "name")
+    return _kooc_resolution(self, ast, mangler.Mangler(), parents)
+
+
+@meta.add_method(cnorm.nodes.BlockStmt)
+def kooc_resolution(self, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler = mangler.Mangler(),
+                    parents: list = list()):
     dellist = []
     for var in vars(self):
         if getattr(self, var) is not None:
-            _var = sub_resolution(getattr(self, var), ast, mangler)
+            _var = sub_resolution(getattr(self, var), ast, _mangler, parents)
             if _var is None:
                 dellist.append(var)
             else:
@@ -65,49 +129,6 @@ def _kooc_resolution(self, ast: cnorm.nodes.BlockStmt, mangler: mangler.Mangler)
     for _del in dellist:
         delattr(self, _del)
     return self
-
-
-def sub_search_in_tree(var, predicate: callable):
-    if isinstance(var, node.Node):
-        return var.search_in_tree(predicate)
-    elif isinstance(var, str):
-        return None
-    elif hasattr(var, '__iter__'):
-        for _var in var:
-            __var = sub_search_in_tree(_var, predicate)
-            if __var is not None:
-                return __var
-    return None
-
-
-@meta.add_method(node.Node)
-def search_in_tree(self, predicate: callable):
-    if predicate(self):
-        return self
-    for var in vars(self):
-        _var = sub_search_in_tree(getattr(self, var), predicate)
-        if _var is not None:
-            return _var
-    return None
-
-
-@meta.add_method(nodes.Imp)
-def search_in_tree(self: nodes.Imp, predicate: callable):
-    if not hasattr(self, 'imported'):
-        self.imported = kooc.Kooc().parse_file(self.value)
-    ret = self.imported.search_in_tree
-    if ret is None:
-        ret = node.Node.search_in_tree(self, predicate)
-    return ret
-
-
-@meta.add_method(node.Node)
-def kooc_resolution(self, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler = mangler.Mangler()):
-    global nm
-    nm.use(self)
-    if hasattr(self, '_name'):
-        self._name = _mangler.name(self._name).mangle("container", "name")
-    return _kooc_resolution(self, ast, mangler.Mangler())
 
 
 def decl_modifier_in_namespace(decl_node: cnorm.nodes.Decl):
@@ -119,17 +140,23 @@ def decl_modifier_in_namespace(decl_node: cnorm.nodes.Decl):
 
 
 @meta.add_method(nodes.Nmspce)
-def kooc_resolution(self: nodes.Nmspce, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler):
+def kooc_resolution(self: nodes.Nmspce, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
     global nm
     nm.push(cnorm.nodes.Decl, decl_modifier_in_namespace)
     new_mangler = copy.copy(_mangler)
     new_mangler.enable()
     new_mangler.container(self.name)
-    _kooc_resolution(self, ast, new_mangler)
+    _kooc_resolution(self, ast, new_mangler, parents)
     return self.body
 
 
 @meta.add_method(nodes.Defn)
-def kooc_resolution(self: nodes.Defn, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler):
+def kooc_resolution(self: nodes.Defn, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
     global nm
-    print(ast.search_in_tree(lambda x: x if type(x) is nodes.Nmspce and x.name is self.name else None))
+    new_mangler = copy.copy(_mangler)
+    new_mangler.enable()
+    new_mangler.container(self.name)
+    namespace = ast.search_in_tree(lambda namespace, parents: namespace if isinstance(namespace, nodes.Nmspce) and namespace.name == self.name and parents == parents else None)
+    self.body = namespace.body + self.body
+    _kooc_resolution(self, ast, new_mangler, parents)
+    return self.body;
