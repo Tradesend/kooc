@@ -8,6 +8,6 @@
 
 int main() {
     int toto;
-
-    toto = NAMESPACE /* test */@ toto ;
+    toto = call(toto);
+    toto = @new(TITI)(toto);
 }

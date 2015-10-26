@@ -1,5 +1,6 @@
 __author__ = 'collio_v'
 
+import copy
 import os, sys
 from kooc import Kooc
 from compiler import information
@@ -13,5 +14,4 @@ os.chdir(os.path.dirname(os.path.abspath(sys.argv[1])))
 information.File.name = sys.argv[1]
 res = cooker.parse_file(filename)
 
-print(res)
-print(res.kooc_resolution(res).to_c())
+print(res.kooc_resolution(copy.deepcopy(res)).to_c())

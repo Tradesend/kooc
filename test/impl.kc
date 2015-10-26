@@ -1,0 +1,12 @@
+@import(klass)
+
+@implementation(CLASS) {
+    int    method(int, char) {
+    }
+};
+
+int main(int, char);
+
+int main() {
+    CLASS@toto();
+}

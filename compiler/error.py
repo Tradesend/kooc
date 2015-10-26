@@ -6,5 +6,5 @@ class Error:
     def __init__(self, error: str):
         self.error = error
 
-    def __str__(self):
+    def __repr__(self):
         return "kooc: " + information.File.name + ": " + self.error
