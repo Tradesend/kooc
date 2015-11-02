@@ -31,7 +31,6 @@ class Implementation(grammar.Grammar):
                 "@" !!"constructor"
                 #Declaration.create_ctype(local_specifier)
                 declarator:decl
-                callable:callable
                 Statement.compound_statement:block
                 #define_ctor(decl, current_block)
                 #Declaration.add_body(decl, block)
@@ -42,7 +41,6 @@ class Implementation(grammar.Grammar):
                 "@" !!"destructor"
                 #Declaration.create_ctype(local_specifier)
                 declarator:decl
-                callable:callable
                 Statement.compound_statement:block
                 #define_dtor(decl, current_block)
                 #Declaration.add_body(decl, block)

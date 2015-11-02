@@ -15,7 +15,7 @@ class Definition(grammar.Grammar):
                  id:definition_name ")"
                 #name_definition(_, definition_name)
                 '{' [ declaration ]* '}'
-                #depile_context(_)
+                #depile_defn_context(_)
             ]
         """
 
@@ -34,6 +34,6 @@ def name_definition(self: Definition, ast: nodes.Defn, definition_name) -> bool:
 
 
 @meta.hook(Definition)
-def depile_context(self: Definition, current_block):
-    self.rule_nodes.parents['current_block'].ref.body.append(current_block)
+def depile_defn_context(self: Definition, context):
+    self.rule_nodes.parents['current_block'].ref.body.append(context)
     return True

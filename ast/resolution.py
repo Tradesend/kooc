@@ -188,9 +188,11 @@ def kooc_resolution(self: nodes.Defn, ast: cnorm.nodes.BlockStmt, _mangler: mang
     new_mangler.container(self.name)
     namespace = ast.search_in_tree(lambda namespace, parents: namespace if isinstance(namespace,
                                                                                       nodes.Namespace) and namespace.name == self.name and parents == parents else None)
-    self.body = namespace.body + self.body
-    _kooc_resolution(self, ast, new_mangler, parents)
-    return self.body
+    self.body = [ declaration for declaration in namespace.body if hasattr(declaration, '_assign_expr')] + self.body
+
+    array = sub_resolution(self.body, ast, new_mangler, parents)
+
+    return array
 
 
 @meta.add_method(nodes.KoocId)
@@ -205,7 +207,7 @@ def kooc_resolution(self: nodes.KoocId, ast: cnorm.nodes.BlockStmt, _manger: man
     return self
 
 
-def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler):
+def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl):
     vtable_mangler = copy.copy(_mangler)
     res = cnorm.nodes.Decl('', cnorm.nodes.ComposedType('__5vtable' + name))
     res._ctype.fields = []
@@ -217,7 +219,7 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler):
                     declaration._ctype._params).callable().mangle(),
                 cnorm.nodes.PrimaryType(declaration._ctype._identifier))
             _declaration_pointer._ctype._decltype = cnorm.nodes.PointerType()
-            _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(declaration._ctype._params)
+            _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType([_this] + declaration._ctype._params)
             res._ctype.fields.append(_declaration_pointer)
     return res
 
@@ -234,14 +236,41 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     nm.push(nodes.Method, lambda destructor: False)
 
     self._ctype._identifier = _mangler.name(self._ctype._identifier).type_definition().mangle()
-    vtable = make_vtable(self, self._ctype._identifier, new_mangler)
+    _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(self._ctype._identifier))
+    _this._ctype._decltype = cnorm.nodes.PointerType()
+    vtable = make_vtable(self, self._ctype._identifier, new_mangler, _this)
+
+    _typedef = cnorm.nodes.Decl(_mangler.type_definition().mangle(), cnorm.nodes.ComposedType(self._ctype._identifier))
+    _typedef._ctype._specifier = 1
+    _typedef._ctype._storage = 2
 
     method_mangler = copy.copy(new_mangler)
     methods_declaration = []
     for method in self._ctype.fields:
         if type(method) is nodes.Method:
-            method._name = method_mangler.name(method._name).callable().mangle()
+            method._ctype._params = [_this] + method._ctype._params
+            if method.accessibility.virtual is True:
+                virtual = copy.deepcopy(method)
+                method_mangler._symtype = "__7virtual"
+                virtual._name = method_mangler.name(method._name).params(virtual._ctype._params).mangle()
+                methods_declaration.append(virtual)
+            method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
             methods_declaration.append(method)
+        elif type(method) is nodes.Constructor:
+            newer = copy.deepcopy(method)
+            method._ctype._params = [_this] + method._ctype._params
+            method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
+            newer._name = method_mangler.name("new").params(newer._ctype._params).mangle()
+            methods_declaration.append(method)
+            methods_declaration.append(newer)
+        elif type(method) is nodes.Constructor:
+            newer = copy.deepcopy(method)
+            method._ctype._params = [_this] + method._ctype._params
+            method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
+            newer._name = method_mangler.name("delete").params(method._ctype._params).mangle()
+            methods_declaration.append(method)
+            methods_declaration.append(newer)
+
 
     self._ctype.fields = sub_resolution(self._ctype.fields, ast, new_mangler, parents)
 
@@ -249,7 +278,7 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     nm.pop(nodes.Constructor)
     nm.pop(nodes.Method)
 
-    return methods_declaration + [vtable, self]
+    return methods_declaration + [vtable, self, _typedef]
 
 
 def verify_parameters(l1: list, l2: list):
@@ -263,21 +292,63 @@ def verify_parameters(l1: list, l2: list):
 def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
     impl_mangler = copy.copy(_mangler)
     impl_mangler.enable()
-    impl_mangler.container(self.name)
 
     klass = ast.search_in_tree(lambda klass, parents: klass if type(klass) is nodes.Class
                                                                and klass.class_name == self.name
                                                                and parents == parents else None,
                                parents)
-    for methodImpl in self.body:
-        methodDef = next((method for method in klass._ctype.fields if type(method) is nodes.Method
-                          and method._name == methodImpl._name
-                          and method._ctype._identifier == methodImpl._ctype._identifier
-                          and len(method._ctype.params) == len(methodImpl._ctype.params)
-                          and verify_parameters(method._ctype.params, methodImpl._ctype.params)), None)
+
+    _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(impl_mangler.name(klass._ctype._identifier).type_definition().mangle()))
+    _this._ctype._decltype = cnorm.nodes.PointerType()
+
+    if klass is None:
+        print("error: klass implementation: ", self.name, " doesn't match any declaration", file=sys.stderr)
+        exit(0)
+
+    impl_mangler.container(self.name)
+    for pos, methodImpl in enumerate(self.body):
+        methodDef = None
+        if type(methodImpl) is nodes.MethodImplementation:
+            methodDef = next((method for method in klass._ctype.fields if (type(method) is nodes.Method)
+                              and method._name == methodImpl._name
+                              and method._ctype._identifier == methodImpl._ctype._identifier
+                              and len(method._ctype.params) == len(methodImpl._ctype.params)
+                              and verify_parameters(method._ctype.params, methodImpl._ctype.params)), None)
+        elif type(methodImpl) is nodes.ConstructorImplementation:
+            methodDef = next((method for method in klass._ctype.fields if (type(method) is nodes.Constructor)
+                              and method._name == methodImpl._name
+                              and method._ctype._identifier == methodImpl._ctype._identifier
+                              and len(method._ctype.params) == len(methodImpl._ctype.params)
+                              and verify_parameters(method._ctype.params, methodImpl._ctype.params)), None)
+        elif type(methodImpl) is nodes.DestructorImplementation:
+            methodDef = next((method for method in klass._ctype.fields if (type(method) is nodes.Destructor)
+                              and method._name == methodImpl._name
+                              and method._ctype._identifier == methodImpl._ctype._identifier
+                              and len(method._ctype.params) == len(methodImpl._ctype.params)
+                              and verify_parameters(method._ctype.params, methodImpl._ctype.params)), None)
+
         if methodDef is None:
             del methodImpl.body
-            print("No matching definition for method: ", methodImpl.to_c(), "in class:", self.name, file=sys.stderr)
+            print("error: No matching definition for method: ", str(methodImpl.to_c()).strip('\n'), "in class: ", self.name,
+                  file=sys.stderr)
             exit(0)
+
+        methodImpl._ctype._params.insert(0, _this)
+
         methodDef.defined = True
+
+    for method in klass._ctype.fields:
+        if not hasattr(method, 'defined') or method.defined is not True:
+            if type(method) is nodes.Constructor:
+                print("error: cons", str(method.to_c()).split("int cons")[1].strip('\n'),
+                      " declared but not defined in class: ", self.name, sep='', file=sys.stderr)
+                exit(0)
+            elif type(method) is nodes.Destructor:
+                print("error: dest", str(method.to_c()).split("int dest")[1].strip('\n'),
+                      " declared but not defined in class: ", self.name, sep='', file=sys.stderr)
+                exit(0)
+            else:
+                print("warning: undefined method: ", str(method.to_c()).strip('\n'), " in class: ",
+                      self.name, file=sys.stderr)
+
     return sub_resolution(self.body, ast, impl_mangler, parents)
