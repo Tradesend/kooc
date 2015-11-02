@@ -3,6 +3,7 @@ from os import path
 from compiler import error
 from cnorm.parsing import declaration
 import nodes
+import kooc
 
 
 class Import(grammar.Grammar):
@@ -31,4 +32,7 @@ def validate_import(self: Import, context: parsing.Node,
         return False
     ast = nodes.Imp(pathname)
     current_block.ref.body.append(ast)
+    self.imported = kooc.Kooc().parse_file('{0}.kh'.format(pathname))
+    for key in self.imported.types:
+        current_block.ref.types[key] = self.imported.types[key]
     return True

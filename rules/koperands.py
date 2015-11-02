@@ -26,7 +26,7 @@ class Koperands(grammar.Grammar):
 
 @meta.hook(Koperands)
 def make_kooc_operator(self: Koperands, context, operator, operator_type, args):
-    if (hasattr(args, 'list')):
+    if hasattr(args, 'list'):
         context.set(KoocOperators[self.value(operator)](self.value(operator_type), cnorm.nodes.Id(self.value(operator)),
                                                         args.list))
     else:

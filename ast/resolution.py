@@ -101,8 +101,7 @@ def search_in_tree(self, predicate: callable, parents: list = list()):
 
 @meta.add_method(nodes.Imp)
 def search_in_tree(self: nodes.Imp, predicate: callable, parents: list):
-    if not hasattr(self, 'imported'):
-        self.imported = kooc.Kooc().parse_file('{0}.kh'.format(self.value))
+    self.imported = kooc.Kooc().parse_file('{0}.kh'.format(self.value))
     ret = self.imported.search_in_tree(predicate)
     if ret is None:
         ret = node.Node.search_in_tree(self, predicate, parents)
@@ -118,19 +117,30 @@ def kooc_resolution(self, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler 
     return _kooc_resolution(self, ast, mangler.Mangler(), parents)
 
 
+def identifier_mangling(identifier: str):
+    new_mangler = mangler.Mangler(True)
+    scopes = identifier.split('@')
+    name = scopes.pop()
+    for scope in scopes:
+        new_mangler.container(scope)
+    new_mangler.type_definition()
+    return new_mangler.name(name).mangle()
+
+
 @meta.add_method(cnorm.nodes.Decl)
 def kooc_resolution(self: cnorm.nodes.Decl, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
     res = node.Node.kooc_resolution(self, ast, _mangler, parents)
     if res is not None:
-        if hasattr(res, '_ctype') and res._ctype._storage == 0:
-            _mangler.type(self._ctype._identifier)
-            if hasattr(res._ctype, '_params'):
-                _mangler.callable().params(res._ctype._params)
-        elif hasattr(res, '_ctype') and res._ctype._storage == 2:
-            _mangler._symtype = "__{0}{1}".format(len('typedef'), 'typedef')
-        elif hasattr(res, '_ctype') and res._ctype._storage == 1:
-            _mangler._symtype = "__{0}{1}".format(len('struct'), 'struct')
-    self._name = _mangler.name(self._name).mangle()
+        if hasattr(res, '_ctype'):
+            if res._ctype._storage == 0:
+                _mangler.type(res._ctype._identifier)
+                if hasattr(res._ctype, '_params'):
+                    _mangler.callable().params(res._ctype._params)
+            elif res._ctype._storage == 2 or res._ctype._storage == 1:
+                _mangler.type_definition()
+            if '@' in res._ctype._identifier:
+                res._ctype._identifier = identifier_mangling(res._ctype._identifier)
+        self._name = _mangler.name(self._name).mangle()
     return res
 
 
@@ -223,8 +233,7 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     nm.push(nodes.Constructor, lambda destructor: False)
     nm.push(nodes.Method, lambda destructor: False)
 
-    _mangler._symtype = "__{0}{1}".format(len('class'), 'class')
-    self._ctype._identifier = _mangler.name(self._ctype._identifier).mangle()
+    self._ctype._identifier = _mangler.name(self._ctype._identifier).type_definition().mangle()
     vtable = make_vtable(self, self._ctype._identifier, new_mangler)
 
     method_mangler = copy.copy(new_mangler)

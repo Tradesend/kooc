@@ -1,3 +1,5 @@
+import pyrser
+
 import kooc
 
 __author__ = 'collio_v'
@@ -21,6 +23,7 @@ class Namespace(grammar.Grammar):
                         #depile_context(_)
                         ]
 
+
         identifier = [  scoped_identifier:>_ ]
         scoped_identifier = [
             @ignore("null") [
@@ -29,6 +32,25 @@ class Namespace(grammar.Grammar):
                 id:id #check_id(_, id)
             ]
         ]
+
+        declaration_specifier = [
+            [ [ Base.id '@' ]* Base.id ]:i
+            #new_decl_spec(local_specifier, i, current_block)
+            [
+                #is_composed(local_specifier)
+                composed_type_specifier
+                |
+                #is_enum(local_specifier)
+                enum_specifier
+                |
+                #is_typeof(i)
+                typeof_expr
+            ]?
+            |
+            attr_asm_decl:attr
+            #add_attr_specifier(local_specifier, attr)
+        ]
+
     """
 
 @meta.hook(Namespace)
@@ -40,8 +62,10 @@ def make_namespace(self: Namespace, context, namespace_name, current_block) -> b
 
 
 @meta.hook(Namespace)
-def depile_context(self: Namespace, current_block):
-    self.rule_nodes.parents['current_block'].ref.body.append(current_block)
+def depile_context(self: Namespace, context :nodes.Namespace):
+    self.rule_nodes.parents['current_block'].ref.body.append(context)
+    for value in context.types:
+        self.rule_nodes.parents['current_block'].ref.types["{0}@{1}".format(context.name, value)] = context.types[value]
     return True
 
 
@@ -53,6 +77,8 @@ def make_scoped_identifier(self: Namespace, context):
 
 @meta.hook(Namespace)
 def add_scope(self: Namespace, context: nodes.KoocId, identifier):
+    if not hasattr(context, 'scope'):
+        context.scope = []
     context.scope.append(self.value(identifier))
     return True
 

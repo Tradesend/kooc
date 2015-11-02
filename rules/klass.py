@@ -40,7 +40,6 @@ class Klass(grammar.Grammar):
                 __scope__:local_specifier
                 #Declaration.create_ctype(local_specifier)
                 declaration_specifier*:dsp
-                #print_node(local_specifier)
                 declarator:decl
                 [
                     access:access #check_attribute(decl, access)
@@ -82,14 +81,6 @@ class Klass(grammar.Grammar):
             ]
         """
 
-
-@meta.hook(Klass)
-def print_node(self: Klass, node):
-    print(node)
-    print(self.value(node))
-    return True
-
-
 @meta.hook(Klass)
 def create_class(self: Klass, context, class_name, current_block):
     context.set(nodes.Class(self.value(class_name)))
@@ -100,6 +91,7 @@ def create_class(self: Klass, context, class_name, current_block):
 @meta.hook(Klass)
 def end_class_definition(self: Klass, context: nodes.Class):
     self.rule_nodes.parents['current_block'].ref.body.append(context)
+    self.rule_nodes.parents['current_block'].ref.types[context.class_name] = context
     return True
 
 

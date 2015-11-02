@@ -1,0 +1,11 @@
+@namespace(N) {
+    typedef int toto;
+    @class toto () {
+
+    };
+};
+
+typedef int toto;
+N@toto main() {
+    N@toto p;
+}

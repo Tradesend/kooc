@@ -8,5 +8,7 @@
 int main(int, char);
 
 int main() {
-    CLASS@toto();
+    NAMESPACE@CLASS var;
+
+    var->toto();
 }

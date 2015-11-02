@@ -43,6 +43,10 @@ class Mangler:
         )
         return self
 
+    def type_definition(self):
+        self._symtype = "__4type"
+        return self
+
     def type(self, _type: str):
         self._type = "__{0}{1}".format(
             len(_type),
