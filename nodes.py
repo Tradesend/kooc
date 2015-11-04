@@ -25,7 +25,7 @@ class Class(nodes.Decl):
         self._ctype._specifier = 1
         self._ctype.fields = []
         self.class_name = name
-
+        self.parents = []
 
 class Impl(nodes.BlockStmt):
     def __init__(self, name: str) -> object:

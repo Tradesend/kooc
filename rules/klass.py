@@ -17,8 +17,18 @@ class Klass(grammar.Grammar):
     grammar = """
             declaration = [
                 "@class" __scope__:current_block  id:class_name #create_class(_, class_name, current_block)
-                '(' ')'
+                '(' [
+                        [ super_class:super_class #push_inheritence(_, super_class) ]?
+                        [ ',' super_class:super_class #push_inheritence(_, super_class)]*
+                    ] ')'
                 '{' [ inner_class | ctor | dtor ]* "};" #end_class_definition(_)
+            ]
+            super_class = [
+                @ignore("null") [
+                    #make_scoped_identifier(_)
+                    [ @ignore("C/C++") Base.id:identifier '@' #add_scope(_, identifier) ]*
+                    Base.id:id #check_id(_, id)
+                ]
             ]
             ctor = [
                 __scope__:local_specifier
@@ -87,6 +97,11 @@ class Klass(grammar.Grammar):
 def create_class(self: Klass, context, class_name, current_block):
     context.set(nodes.Class(self.value(class_name)))
     current_block.ref = context
+    return True
+
+@meta.hook(Klass)
+def push_inheritence(self: Klass, context: nodes.Class, super_class: nodes.KoocId):
+    context.parents.append(super_class)
     return True
 
 

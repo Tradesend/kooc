@@ -1,3 +1,5 @@
+import cnorm
+import sys
 from pyrser import grammar, meta, parsing
 from os import path
 from compiler import error
@@ -33,6 +35,9 @@ def validate_import(self: Import, context: parsing.Node,
     ast = nodes.Imp(pathname)
     current_block.ref.body.append(ast)
     self.imported = kooc.Kooc().parse_file('{0}.kh'.format(pathname))
+    if type(current_block.ref) is not cnorm.nodes.RootBlockStmt:
+        print(error.Error("can not import inside a class or a namespace"), file=sys.stderr)
+        return False
     for key in self.imported.types:
         current_block.ref.types[key] = self.imported.types[key]
     return True

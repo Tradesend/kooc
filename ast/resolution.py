@@ -90,12 +90,20 @@ def sub_search_in_tree(var, predicate: callable, parents: list):
 def search_in_tree(self, predicate: callable, parents: list = list()):
     if predicate(self, parents):
         return self
-    parents.append(self)
+
+    if type(self) in [nodes.Class, nodes.Impl, nodes.Namespace, nodes.Defn]:
+        if hasattr(self, 'name'):
+            parents.append(self.name)
+        else:
+            parents.append(self.class_name)
+
     for var in vars(self):
         _var = sub_search_in_tree(getattr(self, var), predicate, parents)
         if _var is not None:
             return _var
-    parents.pop()
+
+    if type(self) in [nodes.Class, nodes.Impl, nodes.Namespace, nodes.Defn]:
+        parents.pop()
     return None
 
 
@@ -176,7 +184,9 @@ def kooc_resolution(self: nodes.Namespace, ast: cnorm.nodes.BlockStmt, _mangler:
     new_mangler.enable()
     new_mangler.container(self.name)
     nm.push(cnorm.nodes.Decl, decl_modifier_in_namespace)
+    parents.append(self.name)
     _kooc_resolution(self, ast, new_mangler, parents)
+    parents.pop()
     nm.pop(cnorm.nodes.Decl)
     return self.body
 
@@ -186,11 +196,13 @@ def kooc_resolution(self: nodes.Defn, ast: cnorm.nodes.BlockStmt, _mangler: mang
     new_mangler = copy.copy(_mangler)
     new_mangler.enable()
     new_mangler.container(self.name)
-    namespace = ast.search_in_tree(lambda namespace, parents: namespace if isinstance(namespace,
-                                                                                      nodes.Namespace) and namespace.name == self.name and parents == parents else None)
+    namespace = ast.search_in_tree(lambda namespace, _parents: namespace if isinstance(namespace,
+                                                                                       nodes.Namespace) and namespace.name == self.name and parents == _parents else None)
     self.body = [declaration for declaration in namespace.body if hasattr(declaration, '_assign_expr')] + self.body
 
+    parents.append(self.name)
     array = sub_resolution(self.body, ast, new_mangler, parents)
+    parents.pop()
 
     return array
 
@@ -209,7 +221,7 @@ def kooc_resolution(self: nodes.KoocId, ast: cnorm.nodes.BlockStmt, _manger: man
 
 def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl):
     vtable_mangler = copy.copy(_mangler)
-    res = cnorm.nodes.Decl('', cnorm.nodes.ComposedType('__5vtable' + name))
+    res = cnorm.nodes.Decl('', cnorm.nodes.ComposedType('__6vtable' + name))
     res._ctype.fields = []
     res._ctype._specifier = 1
     for declaration in klass._ctype.fields:
@@ -222,7 +234,13 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
             _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
                 [_this] + declaration._ctype._params)
             res._ctype.fields.append(_declaration_pointer)
-    return res
+
+    _typedef = cnorm.nodes.Decl('__6vtable' + vtable_mangler.type_definition().name(klass.class_name).mangle(), cnorm.nodes.ComposedType(res._ctype._identifier))
+    _typedef._ctype._decltype = cnorm.nodes.PointerType()
+    _typedef._ctype._specifier = 1
+    _typedef._ctype._storage = 2
+
+    return [res, _typedef]
 
 
 @meta.add_method(nodes.Class)
@@ -236,7 +254,7 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     nm.push(nodes.Constructor, lambda destructor: False)
     nm.push(nodes.Method, lambda destructor: False)
 
-    self._ctype._identifier = _mangler.name(self._ctype._identifier).type_definition().mangle()
+    self._ctype._identifier = _mangler.name(self._ctype._identifier).class_definition().mangle()
     _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(self._ctype._identifier))
     vtable = make_vtable(self, self._ctype._identifier, new_mangler, _this)
 
@@ -278,7 +296,7 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     nm.pop(nodes.Constructor)
     nm.pop(nodes.Method)
 
-    return methods_declaration + [vtable, self, _typedef]
+    return methods_declaration + vtable + [self, _typedef]
 
 
 def verify_parameters(l1: list, l2: list):
@@ -298,26 +316,34 @@ def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.Const
     ret.body = kooc.Kooc().parse("""
         int new() {
             int this;
-            this = malloc(sizeof(void*) + sizeof(*this));
+            int vtable;
+            this = sizeof(void*) + malloc(sizeof(void*) + sizeof(*this));
+            vtable = ((void*)this) - 8;
+            vtable = malloc(sizeof(*vtable));
             """ + new_operator_mangler.name(methodDef._name).callable().type('void').params(
-        methodImpl._ctype._params).mangle() + "(this, ((void*)(this)) - 8, {0})".format(
+        methodImpl._ctype._params).mangle() + "({0})".format(
         ', '.join([decl._name for decl in methodImpl._ctype._params])
     ) + """;
             return this;
         }
     """).body[0].body
     ret.body.body[0]._ctype._identifier = _this._ctype._identifier
+    ret.body.body[1]._ctype._identifier = '__6vtable' + _this._ctype._identifier
     return ret
 
 
 def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.Class,
                      vtable_init_mangler: mangler.Mangler, _this):
-    inner_vtable_init_for_virtuality = [virtual for virtual in klass._ctype.fields if type(virtual) is nodes.Method and virtual.accessibility.virtual is True]
+    inner_vtable_init_for_virtuality = [virtual for virtual in klass._ctype.fields if
+                                        type(virtual) is nodes.Method and (
+                                            virtual.accessibility.virtual is True or virtual.accessibility.override is True)]
     inner_vtable_init_for_virtuality_stringified = '\n'.join(["vtable.{0} = &{1};".format(
-        vtable_init_mangler.callable().params([_this] + virtual._ctype._params).type(virtual._ctype._identifier).mangle(),
+        vtable_init_mangler.callable().params([_this] + virtual._ctype._params).type(
+            virtual._ctype._identifier).mangle(),
         vtable_init_mangler.virtual().params([_this] + virtual._ctype._params).type(virtual._ctype._identifier).mangle()
     ) for virtual in inner_vtable_init_for_virtuality])
-    constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + "}").body[0].body.body + constructor.body.body
+    constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + "}").body[
+                                0].body.body + constructor.body.body
     pass
 
 
@@ -326,19 +352,18 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
     impl_mangler = copy.copy(_mangler)
     impl_mangler.enable()
 
-    klass = ast.search_in_tree(lambda klass, parents: klass if type(klass) is nodes.Class
-                                                               and klass.class_name == self.name
-                                                               and parents == parents else None,
-                               parents)
+    klass = ast.search_in_tree(lambda klass, _parents: klass if type(klass) is nodes.Class
+                                                                and klass.class_name == self.name
+                                                                and parents == _parents else None)
+
+    if klass is None:
+        print("error: klass implementation: ", self.name, " doesn't match any declaration", file=sys.stderr)
+        exit(0)
 
     _this = cnorm.nodes.Decl('this', cnorm.nodes.PrimaryType(
         impl_mangler.name(klass._ctype._identifier).type_definition().mangle()))
     _vtable = cnorm.nodes.Decl('vtable', cnorm.nodes.PrimaryType(
         '__6vtable' + impl_mangler.name(klass._ctype._identifier).type_definition().mangle()))
-
-    if klass is None:
-        print("error: klass implementation: ", self.name, " doesn't match any declaration", file=sys.stderr)
-        exit(0)
 
     generated_function = []
     impl_mangler.container(self.name)

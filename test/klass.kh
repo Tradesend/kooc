@@ -4,7 +4,6 @@
 
         int     test_attribute                  @property(get: public, set: private);
 
-        int             method(int, char)       @callable(call: private, virtual);
         void            method(int)             @callable(call: public, virtual);
     };
 };

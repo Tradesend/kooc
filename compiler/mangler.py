@@ -43,6 +43,14 @@ class Mangler:
         )
         return self
 
+    def class_definition(self):
+        self._symtype = "__5class"
+        return self        
+
+    def vtable_definition(self):
+        self._symtype = "__6vtable"
+        return self        
+    
     def type_definition(self):
         self._symtype = "__4type"
         return self

@@ -3,7 +3,7 @@
 
 @definition(NAMESPACE) {
     @implementation(CLASS) {
-        int    method(int, char) {
+        int    method(int) {
 
         }
         @constructor(int a, char* av) {
