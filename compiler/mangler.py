@@ -43,6 +43,14 @@ class Mangler:
         )
         return self
 
+    def class_definition(self):
+        self._symtype = "__5class"
+        return self        
+
+    def vtable_definition(self):
+        self._symtype = "__6vtable"
+        return self        
+    
     def type_definition(self):
         self._symtype = "__4type"
         return self
@@ -75,7 +83,8 @@ class Mangler:
     def mangle(self):
         if not self.enabled:
             return self.base_name
-        mangled = self._container + self._symtype + self._name + self._type + self._params
+        mangled = self._container + self._symtype + self._name  # + self._type + self._params
+        self._params = ""
         return mangled
 
     def enable(self):

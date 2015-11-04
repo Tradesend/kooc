@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+
 __author__ = 'collio_v'
 
 import copy

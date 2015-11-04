@@ -17,8 +17,18 @@ class Klass(grammar.Grammar):
     grammar = """
             declaration = [
                 "@class" __scope__:current_block  id:class_name #create_class(_, class_name, current_block)
-                '(' ')'
+                '(' [
+                        [ super_class:super_class #push_inheritence(_, super_class) ]?
+                        [ ',' super_class:super_class #push_inheritence(_, super_class)]*
+                    ] ')'
                 '{' [ inner_class | ctor | dtor ]* "};" #end_class_definition(_)
+            ]
+            super_class = [
+                @ignore("null") [
+                    #make_scoped_identifier(_)
+                    [ @ignore("C/C++") Base.id:identifier '@' #add_scope(_, identifier) ]*
+                    Base.id:id #check_id(_, id)
+                ]
             ]
             ctor = [
                 __scope__:local_specifier
@@ -75,16 +85,23 @@ class Klass(grammar.Grammar):
                     [
                         [ "static"  #configure_staticity(_)  ] |
                         [ "virtual" #configure_virtuality(_) ] |
+                        [ "override" #configure_overriding(_) ] |
                         [ "call:"   id:access_type #configure_call_access(_, access_type) ]
                     ]?
                 ')'
             ]
         """
 
+
 @meta.hook(Klass)
 def create_class(self: Klass, context, class_name, current_block):
     context.set(nodes.Class(self.value(class_name)))
     current_block.ref = context
+    return True
+
+@meta.hook(Klass)
+def push_inheritence(self: Klass, context: nodes.Class, super_class: nodes.KoocId):
+    context.parents.append(super_class)
     return True
 
 
@@ -139,7 +156,22 @@ def configure_virtuality(self: Klass, context: nodes.Callable):
     if context.static is True:
         print(error.Error("methodes can not be virtual and static at the same time"), file=sys.stderr)
         return False
+    if context.override is True:
+        print(error.Error("methodes can not redifine its own virtuality in case of overriding"))
+        return False
     context.virtual = True
+    return True
+
+
+@meta.hook(Klass)
+def configure_overriding(self: Klass, context: nodes.Callable):
+    if context.static is True:
+        print(error.Error("methodes can not override static parents"), file=sys.stderr)
+        return False
+    if context.virtual is True:
+        print(error.Error("methodes can not redifine its own virtuality in case of overriding"))
+        return False
+    context.override = True
     return True
 
 

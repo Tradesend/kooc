@@ -1,12 +1,9 @@
 @namespace(NAMESPACE) {
     @class CLASS () {
         @constructor(int a, char* av)           @callable(call: public);
-        @destructor()                           @callable(call: public, virtual);
 
         int     test_attribute                  @property(get: public, set: private);
 
-        int             method(int, char)       @callable(call: private, virtual);
         void            method(int)             @callable(call: public, virtual);
-        struct toto     method()                @callable(call: public, virtual);
     };
 };

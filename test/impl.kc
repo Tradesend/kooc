@@ -1,13 +1,17 @@
 @import(klass)
 
-@implementation(CLASS) {
-    int    method(int, char) {
-    }
-};
 
-int main(int, char);
+@definition(NAMESPACE) {
+    @implementation(CLASS) {
+        int    method(int) {
 
-int main() {
+        }
+        @constructor(int a, char* av) {
+
+        }
+    };
+}
+int main(){
     NAMESPACE@CLASS var;
 
     var->toto();

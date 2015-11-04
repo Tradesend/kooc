@@ -25,7 +25,7 @@ class Class(nodes.Decl):
         self._ctype._specifier = 1
         self._ctype.fields = []
         self.class_name = name
-
+        self.parents = []
 
 class Impl(nodes.BlockStmt):
     def __init__(self, name: str) -> object:
@@ -35,15 +35,17 @@ class Impl(nodes.BlockStmt):
 
 class Access(parsing.Node):
     def __init__(self) -> object:
-        self.get = "private"
+        self.get = "public"
         self.set = "private"
+        self.static = False
 
 
 class Callable(parsing.Node):
     def __init__(self) -> object:
         self.virtual = False
         self.static = False
-        self.access = "private"
+        self.override = False
+        self.access = "public"
 
 
 class KoocId(nodes.Id):
@@ -68,12 +70,14 @@ class Constructor(nodes.Decl):
     def __init__(self, declaration: nodes.Decl, accessibility: Access):
         super().__init__(declaration._name, declaration._ctype)
         self.accessibility = accessibility
+        self._ctype._identifier = 'void'
 
 
 class Destructor(nodes.Decl):
     def __init__(self, declaration: nodes.Decl, accessibility: Access):
         super().__init__(declaration._name, declaration._ctype)
         self.accessibility = accessibility
+        self._ctype._identifier = 'void'
 
 
 class Attribute(nodes.Decl):
@@ -96,11 +100,13 @@ class MethodImplementation(nodes.Decl):
 class ConstructorImplementation(nodes.Decl):
     def __init__(self, declaration: nodes.Decl):
         super().__init__(declaration._name, declaration._ctype)
+        self._ctype._identifier = 'void'
 
 
 class DestructorImplementation(nodes.Decl):
     def __init__(self, declaration: nodes.Decl):
         super().__init__(declaration._name, declaration._ctype)
+        self._ctype._identifier = 'void'
 
 
 @meta.add_method(Imp)
