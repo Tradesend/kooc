@@ -35,8 +35,9 @@ class Impl(nodes.BlockStmt):
 
 class Access(parsing.Node):
     def __init__(self) -> object:
-        self.get = "private"
+        self.get = "public"
         self.set = "private"
+        self.static = False
 
 
 class Callable(parsing.Node):
@@ -44,7 +45,7 @@ class Callable(parsing.Node):
         self.virtual = False
         self.static = False
         self.override = False
-        self.access = "private"
+        self.access = "public"
 
 
 class KoocId(nodes.Id):

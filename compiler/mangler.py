@@ -75,7 +75,7 @@ class Mangler:
     def mangle(self):
         if not self.enabled:
             return self.base_name
-        mangled = self._container + self._symtype + self._name + self._type + self._params
+        mangled = self._container + self._symtype + self._name  # + self._type + self._params
         self._params = ""
         return mangled
 
