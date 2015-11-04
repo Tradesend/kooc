@@ -12,7 +12,7 @@ KoocOperators = {
 }
 
 
-class Koperands(grammar.Grammar):
+class Koperators(grammar.Grammar):
     entry = 'translation_unit'
     grammar = """
         postfix_expression = [ [
@@ -24,8 +24,8 @@ class Koperands(grammar.Grammar):
         """
 
 
-@meta.hook(Koperands)
-def make_kooc_operator(self: Koperands, context, operator, operator_type, args):
+@meta.hook(Koperators)
+def make_kooc_operator(self: Koperators, context, operator, operator_type, args):
     if hasattr(args, 'list'):
         context.set(KoocOperators[self.value(operator)](self.value(operator_type), cnorm.nodes.Id(self.value(operator)),
                                                         args.list))
