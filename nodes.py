@@ -43,6 +43,7 @@ class Callable(parsing.Node):
     def __init__(self) -> object:
         self.virtual = False
         self.static = False
+        self.override = False
         self.access = "private"
 
 
@@ -68,12 +69,14 @@ class Constructor(nodes.Decl):
     def __init__(self, declaration: nodes.Decl, accessibility: Access):
         super().__init__(declaration._name, declaration._ctype)
         self.accessibility = accessibility
+        self._ctype._identifier = 'void'
 
 
 class Destructor(nodes.Decl):
     def __init__(self, declaration: nodes.Decl, accessibility: Access):
         super().__init__(declaration._name, declaration._ctype)
         self.accessibility = accessibility
+        self._ctype._identifier = 'void'
 
 
 class Attribute(nodes.Decl):
@@ -96,11 +99,13 @@ class MethodImplementation(nodes.Decl):
 class ConstructorImplementation(nodes.Decl):
     def __init__(self, declaration: nodes.Decl):
         super().__init__(declaration._name, declaration._ctype)
+        self._ctype._identifier = 'void'
 
 
 class DestructorImplementation(nodes.Decl):
     def __init__(self, declaration: nodes.Decl):
         super().__init__(declaration._name, declaration._ctype)
+        self._ctype._identifier = 'void'
 
 
 @meta.add_method(Imp)

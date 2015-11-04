@@ -75,11 +75,13 @@ class Klass(grammar.Grammar):
                     [
                         [ "static"  #configure_staticity(_)  ] |
                         [ "virtual" #configure_virtuality(_) ] |
+                        [ "override" #configure_overriding(_) ] |
                         [ "call:"   id:access_type #configure_call_access(_, access_type) ]
                     ]?
                 ')'
             ]
         """
+
 
 @meta.hook(Klass)
 def create_class(self: Klass, context, class_name, current_block):
@@ -139,7 +141,22 @@ def configure_virtuality(self: Klass, context: nodes.Callable):
     if context.static is True:
         print(error.Error("methodes can not be virtual and static at the same time"), file=sys.stderr)
         return False
+    if context.override is True:
+        print(error.Error("methodes can not redifine its own virtuality in case of overriding"))
+        return False
     context.virtual = True
+    return True
+
+
+@meta.hook(Klass)
+def configure_overriding(self: Klass, context: nodes.Callable):
+    if context.static is True:
+        print(error.Error("methodes can not override static parents"), file=sys.stderr)
+        return False
+    if context.virtual is True:
+        print(error.Error("methodes can not redifine its own virtuality in case of overriding"))
+        return False
+    context.override = True
     return True
 
 

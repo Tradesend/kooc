@@ -188,7 +188,7 @@ def kooc_resolution(self: nodes.Defn, ast: cnorm.nodes.BlockStmt, _mangler: mang
     new_mangler.container(self.name)
     namespace = ast.search_in_tree(lambda namespace, parents: namespace if isinstance(namespace,
                                                                                       nodes.Namespace) and namespace.name == self.name and parents == parents else None)
-    self.body = [ declaration for declaration in namespace.body if hasattr(declaration, '_assign_expr')] + self.body
+    self.body = [declaration for declaration in namespace.body if hasattr(declaration, '_assign_expr')] + self.body
 
     array = sub_resolution(self.body, ast, new_mangler, parents)
 
@@ -219,7 +219,8 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
                     declaration._ctype._params).callable().mangle(),
                 cnorm.nodes.PrimaryType(declaration._ctype._identifier))
             _declaration_pointer._ctype._decltype = cnorm.nodes.PointerType()
-            _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType([_this] + declaration._ctype._params)
+            _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
+                [_this] + declaration._ctype._params)
             res._ctype.fields.append(_declaration_pointer)
     return res
 
@@ -237,10 +238,10 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
 
     self._ctype._identifier = _mangler.name(self._ctype._identifier).type_definition().mangle()
     _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(self._ctype._identifier))
-    _this._ctype._decltype = cnorm.nodes.PointerType()
     vtable = make_vtable(self, self._ctype._identifier, new_mangler, _this)
 
     _typedef = cnorm.nodes.Decl(_mangler.type_definition().mangle(), cnorm.nodes.ComposedType(self._ctype._identifier))
+    _typedef._ctype._decltype = cnorm.nodes.PointerType()
     _typedef._ctype._specifier = 1
     _typedef._ctype._storage = 2
 
@@ -271,7 +272,6 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
             methods_declaration.append(method)
             methods_declaration.append(newer)
 
-
     self._ctype.fields = sub_resolution(self._ctype.fields, ast, new_mangler, parents)
 
     nm.pop(nodes.Destructor)
@@ -288,6 +288,39 @@ def verify_parameters(l1: list, l2: list):
     return True
 
 
+def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.ConstructorImplementation,
+                           _this: cnorm.nodes.Decl,
+                           impl_mangler: mangler.Mangler):
+    new_operator_mangler = copy.copy(impl_mangler)
+    ret = cnorm.nodes.Decl('new', copy.deepcopy(methodDef._ctype))
+    ret._ctype._identifier = _this._ctype._identifier
+    new_gen = kooc.Kooc()
+    ret.body = kooc.Kooc().parse("""
+        int new() {
+            int this;
+            this = malloc(sizeof(void*) + sizeof(*this));
+            """ + new_operator_mangler.name(methodDef._name).callable().type('void').params(
+        methodImpl._ctype._params).mangle() + "(this, ((void*)(this)) - 8, {0})".format(
+        ', '.join([decl._name for decl in methodImpl._ctype._params])
+    ) + """;
+            return this;
+        }
+    """).body[0].body
+    ret.body.body[0]._ctype._identifier = _this._ctype._identifier
+    return ret
+
+
+def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.Class,
+                     vtable_init_mangler: mangler.Mangler, _this):
+    inner_vtable_init_for_virtuality = [virtual for virtual in klass._ctype.fields if type(virtual) is nodes.Method and virtual.accessibility.virtual is True]
+    inner_vtable_init_for_virtuality_stringified = '\n'.join(["vtable.{0} = &{1};".format(
+        vtable_init_mangler.callable().params([_this] + virtual._ctype._params).type(virtual._ctype._identifier).mangle(),
+        vtable_init_mangler.virtual().params([_this] + virtual._ctype._params).type(virtual._ctype._identifier).mangle()
+    ) for virtual in inner_vtable_init_for_virtuality])
+    constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + "}").body[0].body.body + constructor.body.body
+    pass
+
+
 @meta.add_method(nodes.Impl)
 def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
     impl_mangler = copy.copy(_mangler)
@@ -298,13 +331,16 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
                                                                and parents == parents else None,
                                parents)
 
-    _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(impl_mangler.name(klass._ctype._identifier).type_definition().mangle()))
-    _this._ctype._decltype = cnorm.nodes.PointerType()
+    _this = cnorm.nodes.Decl('this', cnorm.nodes.PrimaryType(
+        impl_mangler.name(klass._ctype._identifier).type_definition().mangle()))
+    _vtable = cnorm.nodes.Decl('vtable', cnorm.nodes.PrimaryType(
+        '__6vtable' + impl_mangler.name(klass._ctype._identifier).type_definition().mangle()))
 
     if klass is None:
         print("error: klass implementation: ", self.name, " doesn't match any declaration", file=sys.stderr)
         exit(0)
 
+    generated_function = []
     impl_mangler.container(self.name)
     for pos, methodImpl in enumerate(self.body):
         methodDef = None
@@ -329,11 +365,17 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
 
         if methodDef is None:
             del methodImpl.body
-            print("error: No matching definition for method: ", str(methodImpl.to_c()).strip('\n'), "in class: ", self.name,
+            print("error: No matching definition for method: ", str(methodImpl.to_c()).strip('\n'), "in class: ",
+                  self.name,
                   file=sys.stderr)
             exit(0)
 
         methodImpl._ctype._params.insert(0, _this)
+
+        if type(methodDef) is nodes.Constructor:
+            methodImpl._ctype._params.insert(1, _vtable)
+            generated_function.append(construct_new_operator(methodDef, methodImpl, _this, impl_mangler))
+            fill_constructor(methodImpl, klass, copy.copy(impl_mangler), _this)
 
         methodDef.defined = True
 
@@ -351,4 +393,4 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
                 print("warning: undefined method: ", str(method.to_c()).strip('\n'), " in class: ",
                       self.name, file=sys.stderr)
 
-    return sub_resolution(self.body, ast, impl_mangler, parents)
+    return sub_resolution(self.body + generated_function, ast, impl_mangler, parents)
