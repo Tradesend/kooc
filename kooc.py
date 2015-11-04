@@ -1,6 +1,6 @@
 __author__ = 'collio_v'
 
-from rules import importing, namespace, definition, klass, koperands, implementation
+from rules import importing, namespace, definition, klass, koperators, implementation
 from cnorm.parsing import declaration
 from pyrser import grammar
 
@@ -13,7 +13,7 @@ class Kooc(grammar.Grammar,
            importing.Import,
            klass.Klass, implementation.Implementation,
            namespace.Namespace, definition.Definition,
-           koperands.Koperands,
+           koperators.Koperators,
            declaration.Declaration):
     entry = "translation_unit"
     grammar = """
