@@ -219,7 +219,7 @@ def kooc_resolution(self: nodes.KoocId, ast: cnorm.nodes.BlockStmt, _manger: man
     return self
 
 
-def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl):
+def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl, parents: list):
     vtable_mangler = copy.copy(_mangler)
     res = cnorm.nodes.Decl('', cnorm.nodes.ComposedType('__6vtable' + name))
     res._ctype.fields = []
@@ -234,6 +234,17 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
             _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
                 [_this] + declaration._ctype._params)
             res._ctype.fields.append(_declaration_pointer)
+    for parent in parents:
+        for declaration in parent._ctype.fields:
+            if type(declaration) is not nodes.Attribute and declaration.accessibility.virtual is True:
+                _declaration_pointer = cnorm.nodes.Decl(
+                    vtable_mangler.name(declaration._name).type(declaration._ctype._identifier).params(
+                        declaration._ctype._params).callable().mangle(),
+                    cnorm.nodes.PrimaryType(declaration._ctype._identifier))
+                _declaration_pointer._ctype._decltype = cnorm.nodes.PointerType()
+                _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
+                    [_this] + declaration._ctype._params)
+                res._ctype.fields.append(_declaration_pointer)
 
     _typedef = cnorm.nodes.Decl('__6vtable' + vtable_mangler.type_definition().name(klass.class_name).mangle(), cnorm.nodes.ComposedType(res._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -254,9 +265,17 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     nm.push(nodes.Constructor, lambda destructor: False)
     nm.push(nodes.Method, lambda destructor: False)
 
+    supers = []
+    for parent_name in self.parents:
+        print(parent_name, parent_name.value, parent_name.scope)
+        supers.append(ast.search_in_tree(lambda super, _parents:
+                                    super if type(super) is nodes.Class
+                                             and super.class_name == parent_name.value
+                                             and _parents == parent_name.scope else None))
+
     self._ctype._identifier = _mangler.name(self._ctype._identifier).class_definition().mangle()
     _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(self._ctype._identifier))
-    vtable = make_vtable(self, self._ctype._identifier, new_mangler, _this)
+    vtable = make_vtable(self, self._ctype._identifier, new_mangler, _this, supers)
 
     _typedef = cnorm.nodes.Decl(_mangler.type_definition().mangle(), cnorm.nodes.ComposedType(self._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -318,7 +337,7 @@ def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.Const
             int this;
             int vtable;
             this = sizeof(void*) + malloc(sizeof(void*) + sizeof(*this));
-            vtable = ((void*)this) - 8;
+            vtable = ((void*)this) - sizeof(void*);
             vtable = malloc(sizeof(*vtable));
             """ + new_operator_mangler.name(methodDef._name).callable().type('void').params(
         methodImpl._ctype._params).mangle() + "({0})".format(
@@ -339,8 +358,8 @@ def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.
                                             virtual.accessibility.virtual is True or virtual.accessibility.override is True)]
     inner_vtable_init_for_virtuality_stringified = '\n'.join(["vtable.{0} = &{1};".format(
         vtable_init_mangler.callable().params([_this] + virtual._ctype._params).type(
-            virtual._ctype._identifier).mangle(),
-        vtable_init_mangler.virtual().params([_this] + virtual._ctype._params).type(virtual._ctype._identifier).mangle()
+            virtual._ctype._identifier).name(virtual._name).mangle(),
+        vtable_init_mangler.virtual().params([_this] + virtual._ctype._params).name(virtual._name).type(virtual._ctype._identifier).mangle()
     ) for virtual in inner_vtable_init_for_virtuality])
     constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + "}").body[
                                 0].body.body + constructor.body.body

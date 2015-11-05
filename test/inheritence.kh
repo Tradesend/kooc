@@ -3,11 +3,11 @@
     void	method(int)		@callable(call: public, virtual);
   };
 
-  @class CLASS (NAMESPACE@SUPER, NAMESPACE@CLASS) {
+  @class CLASS (NAMESPACE@SUPER) {
     @constructor(int a, char* av)       @callable(call: public);
 
     int		test_attribute          @property(get: public, set: private);
 
-    void        method(int)		@callable(call: public, override);
+    int        method(int)		    @callable(call: public, override);
   };
 };
