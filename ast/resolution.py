@@ -392,7 +392,7 @@ def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.
                 vtable_init_mangler.callable().params([_this] + override._ctype._params).type(
                     override._ctype._identifier).name(override._name).mangle(),
                 vtable_init_mangler.virtual().params([_this] + override._ctype._params).name(override._name).type(
-                    override._ctype._identifier).mangle()
+                    override._ctype._identifier).mangle(), key
             ) for override in methods])
 
     constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + "}").body[
