@@ -1,0 +1,12 @@
+@import(inheritence)
+
+@definition(NAMESPACE) {
+    @implementation(CLASS) {
+        int    method(int) {
+
+        }
+        @constructor(int a, char* av) {
+
+        }
+    };
+}
