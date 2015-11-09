@@ -175,17 +175,25 @@
 
 \begin{Feature}[Mangling]
   \begin{FeatureSection}[What]
-    Mangling is a technique used to avoid many problem on unique names resolution.
+    Mangling is a technique used to avoid many problem on unique names resolution. \newline
     Mangling will modify the name following some pattern in order to avoid name collisions.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Why]
+      Mangling is our solution to simulate a cpp code in a c code. \newline
+      When you create a class in cpp you'r going to set variable and methode in it, if we want to simulate this we need to tell in c that a function is only callable by the struct. The solution for this is to change the function name to className_functionName. \newline
+      The function can in fact still be called by the user. This is why we obfuscate the name.
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{mangling}{ various examples in Kooc }
     \CHeader{mangling}{ various examples in C }
+    Like you can see in this example the name of the variable/function change from \"int NAME\" to \"int ___8variable__3int__4NAME\" this is our mangling. \newline
+    For the purpose of compatibility in variable name we put 3 underscore at the begining of the variable name, after this we tell if it's a variable or a function and to be sure there is no probleme in our parsing we tell the number of caracters. \newline
+    We keep in our parsing the type of the variable and like you can see we use __ for separator to keep our parsing clear and easy to read. In the last part we tell the lenght and the name of the variable we have mangled.
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
     \_\_\_[\{nb\}NAMESPACE\_\_]*[\{nb\}CLASS\_\_]?\{nb\}SYMTYPE\_\_\{nb\}SYMNAME[\_\_[\{nb\}TYPARG\_\_]*\{nb\}RETTYPE]?\_\_ \newline
     \{nb\} = len(word) \newline
-    we mangle with all the namespaces, the class if present. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. Then, if it's a function, we also mangle with every argument's type, and the return type.
+    We mangle with all the namespaces, the class if present. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. Then, if it's a function, we also mangle with every argument's type, and the return type.
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -196,7 +204,7 @@
 
 \begin{Feature}[Import]
   \begin{FeatureSection}[What]
-    @Import Statement will be used for for safe inclusion
+    To support the use of import in our kooc we use an @Import Statement for safe inclusion.
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocCode{import}{ Import demo in Kooc code }
@@ -218,7 +226,7 @@
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{namespace}{ Namespace demo in Kooc header }
-    \CHeader{namespace}{ Namespace translation in C header }    
+    \CHeader{namespace}{ Namespace translation in C header }
     \KoocCode{namespace}{ Namespace demo in Kooc code }
     \CCode{namespace}{ Namespace translation in C code }
   \end{FeatureSection}
@@ -238,7 +246,7 @@
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{class}{ Class demo in Kooc header }
-    \CHeader{class}{ Class translation in C header }    
+    \CHeader{class}{ Class translation in C header }
     \KoocCode{class}{ Class demo in Kooc code }
     \CCode{class}{ Class translation in C code }
   \end{FeatureSection}
