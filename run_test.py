@@ -18,7 +18,4 @@ elif ext == 'kh':
 with open(fname, 'w') as infile:
     infile.write(out.decode('utf-8'))
 if ext == 'kc':
-    try:
-        os.system('gcc ' + fname + ' -o ' + fname.split('.')[0])
-    except:
-        print('Can\'not compile.')
+    os.system('gcc ' + fname + ' -o ' + fname.split('.')[0])
