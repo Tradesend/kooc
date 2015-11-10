@@ -66,6 +66,24 @@ class Delete(nodes.Func):
         self._type = type
 
 
+class Call(nodes.Func):
+    def __init__(self, type, call_expr, params):
+        nodes.Func.__init__(self, call_expr, params)
+        self._type = type
+
+
+class Set(nodes.Func):
+    def __init__(self, type, call_expr, params):
+        nodes.Func.__init__(self, call_expr, params)
+        self._type = type
+
+
+class Get(nodes.Func):
+    def __init__(self, type, call_expr, params):
+        nodes.Func.__init__(self, call_expr, params)
+        self._type = type
+
+
 class Constructor(nodes.Decl):
     def __init__(self, declaration: nodes.Decl, accessibility: Access):
         super().__init__(declaration._name, declaration._ctype)

@@ -1,3 +1,4 @@
 int main() {
     @new(toto)();
+    @set(A@B)(toto, 42);
 }
