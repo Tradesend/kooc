@@ -29,6 +29,7 @@ class Koperators(grammar.Grammar):
         kooc_operators = [ "new" | "delete" | "call" | "set" | "get" ]
         """
 
+
 @meta.hook(Koperators)
 def make_kooc_operator(self: Koperators, context, operator, operator_type, args):
     alist = []
@@ -42,13 +43,16 @@ def make_kooc_operator(self: Koperators, context, operator, operator_type, args)
              alist))
     elif self.value(operator) in ["call", "get", "set"]:
         if not hasattr(args, 'list'):
-            print(error.Error("Koperator " + self.value(operator).upper() + " must have instance as first argument"), file=sys.stderr)
+            print(error.Error("Koperator " + self.value(operator).upper() + " must have instance as first argument"),
+                  file=sys.stderr)
             return False
         if self.value(operator) == "get" and len(args.list) != 1:
             print(error.Error("Koperator GET must have the instance as first and unique argument"), file=sys.stderr)
             return False
         if self.value(operator) == "set" and len(args.list) != 2:
-            print(error.Error("Koperator SET must have the instance as first and new_value as second and only arguments"), file=sys.stderr)
+            print(
+                error.Error("Koperator SET must have the instance as first and new_value as second and only arguments"),
+                file=sys.stderr)
             return False
         context.set(
             KoocOperators[self.value(operator)]

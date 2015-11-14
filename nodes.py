@@ -72,15 +72,15 @@ class Call(nodes.Func):
         self._type = type
 
 
-class Set(nodes.Func):
+class Set(nodes.ExprStmt):
     def __init__(self, type, call_expr, params):
-        nodes.Func.__init__(self, call_expr, params)
+        super().__init__(nodes.Binary(nodes.Raw('='), [nodes.Arrow(params[0], [nodes.Id(type.split('@')[-1])]), params[1]]))
         self._type = type
 
 
-class Get(nodes.Func):
+class Get(nodes.ExprStmt):
     def __init__(self, type, call_expr, params):
-        nodes.Func.__init__(self, call_expr, params)
+        super().__init__(nodes.Arrow(params[0], [nodes.Id(type.split('@')[-1])]))
         self._type = type
 
 

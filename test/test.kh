@@ -1,4 +1,4 @@
 int main() {
-    @new(toto)();
-    @set(A@B)(toto, 42);
+    i->TATA;
+    @get(TOTO@TATA)(i);
 }

@@ -13,4 +13,6 @@
 }
 int main(){
     NAMESPACE@CLASS var;
+
+    @get(NAMESPACE@CLASS@test_attribute)(var);
 }

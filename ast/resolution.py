@@ -251,7 +251,7 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
                 _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
                     [_this] + declaration._ctype._params)
                 res._ctype.fields.append(_declaration_pointer)
-    
+
     _typedef = cnorm.nodes.Decl('__6vtable' + _mangler.type_definition().name(klass.class_name).mangle(),
                                 cnorm.nodes.ComposedType(res._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -302,7 +302,8 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
             methods_declaration.append(method)
         elif type(method) is nodes.Constructor:
             newer = copy.deepcopy(method)
-            method._ctype._params = [_this, cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(vtable[1]._name))] + method._ctype._params
+            method._ctype._params = [_this, cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(
+                vtable[1]._name))] + method._ctype._params
             method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
             newer._name = method_mangler.name("new").params(newer._ctype._params).mangle()
             newer._ctype._identifier = _typedef._name;
@@ -421,12 +422,14 @@ def generate_override_table(self: nodes.Impl, klass: nodes.Class, ast, methods_p
 
 
 @meta.add_method(nodes.MethodImplementation)
-def kooc_resolution(self: nodes.MethodImplementation, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
+def kooc_resolution(self: nodes.MethodImplementation, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler,
+                    parents: list):
     if hasattr(self, 'virtual'):
         self._name = _mangler.virtual().name(self._name).mangle()
         _callable = (kooc.Kooc().parse("""int main() {
             int vtable = ((void*)this) - 8;
-            return (double)(vtable->""" + _mangler.callable().mangle() + """)(""" + ', '.join([p._name for p in self._ctype._params]) + """);
+            return (double)(vtable->""" + _mangler.callable().mangle() + """)(""" + ', '.join(
+            [p._name for p in self._ctype._params]) + """);
         }""")).body[0]
         _callable._name = _mangler.callable().mangle()
         _callable._ctype._params = self._ctype._params
@@ -502,7 +505,9 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
                 construct_new_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler))
             fill_constructor(methodImpl, klass, copy.copy(impl_mangler), _this, _override_table)
         if type(methods_pair[methodImpl._name]) is nodes.Method and (methods_pair[
-            methodImpl._name].accessibility.virtual is True or methods_pair[methodImpl._name].accessibility.override is True):
+                                                                         methodImpl._name].accessibility.virtual is True or
+                                                                             methods_pair[
+                                                                                 methodImpl._name].accessibility.override is True):
             methodImpl.virtual = True
 
         methods_pair[methodImpl._name].defined = True
@@ -543,6 +548,7 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
     self.call_expr.value = new_mangler.name('delete').callable().mangle()
     return self
 
+
 @meta.add_method(nodes.Call)
 def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
     new_mangler = copy.copy(_mangler)
@@ -550,4 +556,51 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
         new_mangler.container(name)
     new_mangler.enable()
     self.call_expr.value = new_mangler.name(self._type.split('@')[-1]).callable().mangle()
+    return self
+
+
+@meta.add_method(nodes.Set)
+def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
+    new_mangler = copy.copy(_mangler)
+    for name in self._type.split('@')[:-1]:
+        new_mangler.container(name)
+    new_mangler.enable()
+
+    attribute = ast.search_in_tree(lambda attribute, _parents: attribute if type(attribute) is nodes.Attribute
+                                                                            and attribute._name == self._type.split('@')[-1]
+                                                                            and _parents == self._type.split('@')[:-1] else None)
+    if attribute is None:
+        print("error: no attribute: ", self._type.split('@')[-1], " declared in class:",
+              '@'.join(self._type.split('@')[:-1]), file=sys.stderr)
+        exit(-1)
+
+    if attribute.accessibility.set == 'private' and parents != self._type.split('@')[:-1]:
+        print("error: access to attribute: ", self._type.split('@')[-1], " declared in class:",
+              '@'.join(self._type.split('@')[:-1]), " which is private", file=sys.stderr)
+
+    self.expr.params[0].params[0].value = new_mangler.name(self._type.split('@')[-1]).variable().mangle()
+    return self
+
+
+@meta.add_method(nodes.Get)
+def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
+    new_mangler = copy.copy(_mangler)
+    for name in self._type.split('@')[:-1]:
+        new_mangler.container(name)
+    new_mangler.enable()
+
+    attribute = ast.search_in_tree(lambda attribute, _parents: attribute if type(attribute) is nodes.Attribute
+                                                                            and attribute._name == self._type.split('@')[-1]
+                                                                            and _parents == self._type.split('@')[:-1] else None)
+    if attribute is None:
+        print("error: no attribute: ", self._type.split('@')[-1], " declared in class:",
+              '@'.join(self._type.split('@')[:-1]), file=sys.stderr)
+        exit(-1)
+
+    if attribute.accessibility.get == 'private' and parents != self._type.split('@')[:-1]:
+        print("error: access to attribute: ", self._type.split('@')[-1], " declared in class:",
+              '@'.join(self._type.split('@')[:-1]), " which is private", file=sys.stderr)
+        exit(-1)
+
+    self.expr.params[0].value = new_mangler.name(self._type.split('@')[-1]).variable().mangle()
     return self
