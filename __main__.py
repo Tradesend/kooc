@@ -13,6 +13,8 @@ from ast import resolution
 cooker = Kooc()
 
 filename = os.path.abspath(sys.argv[1])
+if not os.path.isfile(filename):
+    sys.exit("Couldn't find specified file in : " + filename)
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[1])))
 information.File.name = sys.argv[1]
 res = cooker.parse_file(filename)
