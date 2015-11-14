@@ -1,5 +1,6 @@
 @namespace(NAMESPACE) {
     @class CLASS () {
+        @destructor()                           @callable(call: public);
         @constructor(int a, char* av)           @callable(call: public);
 
         int     test_attribute                  @property(get: public, set: public);

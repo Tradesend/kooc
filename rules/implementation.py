@@ -78,6 +78,6 @@ def define_ctor(self: Implementation, declaration, current_block):
 
 @meta.hook(Implementation)
 def define_dtor(self: Implementation, declaration, current_block):
-    declaration.set(nodes.ConstructorImplementation(declaration))
+    declaration.set(nodes.DestructorImplementation(declaration))
     current_block.ref.body.append(declaration)
     return True

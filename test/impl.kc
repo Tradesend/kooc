@@ -6,6 +6,8 @@
         int    method(int a) {
 
         }
+        @destructor() {
+        }
         @constructor(int a, char* av) {
 
         }

@@ -92,10 +92,9 @@ class Constructor(nodes.Decl):
 
 
 class Destructor(nodes.Decl):
-    def __init__(self, declaration: nodes.Decl, accessibility: Access):
-        super().__init__(declaration._name, declaration._ctype)
+    def __init__(self, accessibility: Access):
+        super().__init__('destructor', nodes.FuncType('void', []))
         self.accessibility = accessibility
-        self._ctype._identifier = 'void'
 
 
 class Attribute(nodes.Decl):

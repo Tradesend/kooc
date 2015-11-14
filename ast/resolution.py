@@ -309,7 +309,7 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
             newer._ctype._identifier = _typedef._name;
             methods_declaration.append(method)
             methods_declaration.append(newer)
-        elif type(method) is nodes.Constructor:
+        elif type(method) is nodes.Destructor:
             newer = copy.deepcopy(method)
             method._ctype._params = [_this] + method._ctype._params
             method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
@@ -342,6 +342,26 @@ def verify_parameters(l1: list, l2: list):
         if l1[x]._ctype._identifier != l2[x]._ctype._identifier:
             return False
     return True
+
+
+def construct_delete_operator(methodDef: nodes.Destructor, methodImpl: nodes.DestructorImplementation,
+                              _this: cnorm.nodes.Decl,
+                              impl_mangler: mangler.Mangler):
+    new_operator_mangler = copy.copy(impl_mangler)
+    ret = cnorm.nodes.Decl('delete', copy.deepcopy(methodImpl._ctype))
+    ret._ctype._identifier = _this._ctype._identifier
+    new_gen = kooc.Kooc()
+    ret.body = kooc.Kooc().parse("""
+        void delete() {
+            """ + new_operator_mangler.name(methodDef._name).callable().type('void').params(
+        methodImpl._ctype._params).mangle() + "({0})".format(
+        ', '.join([decl._name for decl in methodImpl._ctype._params])
+    ) + """;
+        free(this);
+        free(((void*)this - sizeof(void*)));
+        }
+    """).body[0].body
+    return ret
 
 
 def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.ConstructorImplementation,
@@ -442,6 +462,27 @@ def kooc_resolution(self: nodes.MethodImplementation, ast: cnorm.nodes.BlockStmt
         return self
 
 
+@meta.add_method(nodes.DestructorImplementation)
+def kooc_resolution(self: nodes.MethodImplementation, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler,
+                    parents: list):
+    if hasattr(self, 'virtual'):
+        self._name = _mangler.virtual().name(self._name).mangle()
+        _callable = (kooc.Kooc().parse("""int main() {
+            int vtable = ((void*)this) - 8;
+            return (double)(vtable->""" + _mangler.callable().mangle() + """)(""" + ', '.join(
+            [p._name for p in self._ctype._params]) + """);
+        }""")).body[0]
+        _callable._name = _mangler.callable().mangle()
+        _callable._ctype._params = self._ctype._params
+        _callable._ctype._identifier = self._ctype._identifier
+        _callable.body.body[1].expr.params[0]._identifier = self._ctype._identifier
+        _callable.body.body[0]._ctype._identifier = '__6vtable' + self._ctype._params[0]._ctype._identifier
+        return [self, _callable]
+    else:
+        self._name = _mangler.callable().name(self._name).mangle()
+        return self
+
+
 @meta.add_method(nodes.Impl)
 def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
     impl_mangler = copy.copy(_mangler)
@@ -476,11 +517,7 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
                               and len(method._ctype.params) == len(methodImpl._ctype.params)
                               and verify_parameters(method._ctype.params, methodImpl._ctype.params)), None)
         elif type(methodImpl) is nodes.DestructorImplementation:
-            methodDef = next((method for method in klass._ctype.fields if (type(method) is nodes.Destructor)
-                              and method._name == methodImpl._name
-                              and method._ctype._identifier == methodImpl._ctype._identifier
-                              and len(method._ctype.params) == len(methodImpl._ctype.params)
-                              and verify_parameters(method._ctype.params, methodImpl._ctype.params)), None)
+            methodDef = next((method for method in klass._ctype.fields if (type(method) is nodes.Destructor)))
 
         if methodDef is None:
             del methodImpl.body
@@ -504,10 +541,19 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
             generated_function.append(
                 construct_new_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler))
             fill_constructor(methodImpl, klass, copy.copy(impl_mangler), _this, _override_table)
+        if type(methods_pair[methodImpl._name]) is nodes.Destructor:
+            methodImpl._ctype._params.insert(1, _vtable)
+            generated_function.append(
+                construct_delete_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler))
         if type(methods_pair[methodImpl._name]) is nodes.Method and (methods_pair[
                                                                          methodImpl._name].accessibility.virtual is True or
                                                                              methods_pair[
                                                                                  methodImpl._name].accessibility.override is True):
+            methodImpl.virtual = True
+        if type(methods_pair[methodImpl._name]) is nodes.Destructor and (methods_pair[
+                                                                             methodImpl._name].accessibility.virtual is True or
+                                                                                 methods_pair[
+                                                                                     methodImpl._name].accessibility.override is True):
             methodImpl.virtual = True
 
         methods_pair[methodImpl._name].defined = True
@@ -515,11 +561,11 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
     for method in klass._ctype.fields:
         if not hasattr(method, 'defined') or method.defined is not True:
             if type(method) is nodes.Constructor:
-                print("error: cons", str(method.to_c()).split("int cons")[1].strip('\n'),
+                print("error: cons", str(method.to_c()).split("void cons")[1].strip('\n'),
                       " declared but not defined in class: ", self.name, sep='', file=sys.stderr)
                 exit(0)
             elif type(method) is nodes.Destructor:
-                print("error: dest", str(method.to_c()).split("int dest")[1].strip('\n'),
+                print("error: dest", str(method.to_c()).split("void dest")[1].strip('\n'),
                       " declared but not defined in class: ", self.name, sep='', file=sys.stderr)
                 exit(0)
             elif type(method) is nodes.Method:
@@ -556,7 +602,9 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
     for name in self._type.split('@')[:-2]:
         new_mangler.container(name)
     cast = cnorm.nodes.Cast(cnorm.nodes.Raw('()'),
-                            [cnorm.nodes.PrimaryType(new_mangler.name(self._type.split('@')[-2]).type_definition().mangle()), self.params[0]])
+                            [cnorm.nodes.PrimaryType(
+                                new_mangler.name(self._type.split('@')[-2]).type_definition().mangle()),
+                             self.params[0]])
     self.params[0] = cast
     for name in self._type.split('@')[:-1]:
         new_mangler.container(name)
@@ -572,8 +620,10 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
     new_mangler.enable()
 
     attribute = ast.search_in_tree(lambda attribute, _parents: attribute if type(attribute) is nodes.Attribute
-                                                                            and attribute._name == self._type.split('@')[-1]
-                                                                            and _parents == self._type.split('@')[:-1] else None)
+                                                                            and attribute._name ==
+                                                                                self._type.split('@')[-1]
+                                                                            and _parents == self._type.split('@')[
+                                                                                            :-1] else None)
     if attribute is None:
         print("error: no attribute: ", self._type.split('@')[-1], " declared in class:",
               '@'.join(self._type.split('@')[:-1]), file=sys.stderr)
@@ -595,8 +645,10 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
     new_mangler.enable()
 
     attribute = ast.search_in_tree(lambda attribute, _parents: attribute if type(attribute) is nodes.Attribute
-                                                                            and attribute._name == self._type.split('@')[-1]
-                                                                            and _parents == self._type.split('@')[:-1] else None)
+                                                                            and attribute._name ==
+                                                                                self._type.split('@')[-1]
+                                                                            and _parents == self._type.split('@')[
+                                                                                            :-1] else None)
     if attribute is None:
         print("error: no attribute: ", self._type.split('@')[-1], " declared in class:",
               '@'.join(self._type.split('@')[:-1]), file=sys.stderr)

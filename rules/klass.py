@@ -21,7 +21,7 @@ class Klass(grammar.Grammar):
                         [ super_class:super_class #push_inheritence(_, super_class) ]?
                         [ ',' super_class:super_class #push_inheritence(_, super_class)]*
                     ] ')'
-                '{' [ inner_class | ctor | dtor ]* "};" #end_class_definition(_)
+                '{' [ inner_class | Klass.ctor | Klass.dtor ]* "};" #end_class_definition(_)
             ]
             super_class = [
                 @ignore("null") [
@@ -40,9 +40,9 @@ class Klass(grammar.Grammar):
             ]
             dtor = [
                 __scope__:local_specifier
-                "@" !!"destructor" '(' ')'
+                "@" "destructor" '(' ')'
                 callable:callable
-                ';' #create_dtor(decl, current_block, callable)
+                ';' #create_dtor(current_block, callable)
             ]
             inner_class = [
                 __scope__:local_specifier
@@ -220,12 +220,9 @@ def create_ctor(self: Klass, _declaration: cnorm.nodes.Decl, current_block, acce
 
 
 @meta.hook(Klass)
-def create_dtor(self: Klass, _declaration: cnorm.nodes.Decl, current_block, accessibility: nodes.Callable):
+def create_dtor(self: Klass, current_block, accessibility: nodes.Callable):
     if accessibility.static is True:
         print(error.Error("destructor cannot be static"), file=sys.stderr)
         return False
-    if len(_declaration._ctype.params):
-        print(error.Error("destructor cannot have parameters"), file=sys.stderr)
-        return False
-    current_block.ref._ctype.fields.append(nodes.Destructor(_declaration, accessibility))
+    current_block.ref._ctype.fields.append(nodes.Destructor(accessibility))
     return True
