@@ -13,4 +13,5 @@
 
 int main() {
     NAMESPACE@CLASS c = @new(NAMESPACE@CLASS)(45, "toto");
+    int a = @call(NAMESPACE@CLASS@method)(c, 10);
 }

@@ -541,6 +541,16 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
     for name in self._type.split('@'):
         new_mangler.container(name)
     new_mangler.enable()
-    self.call_expr.value = new_mangler.name('new').callable().mangle()
+    self.call_expr.value = new_mangler.name('delete').callable().mangle()
+    print(self)
+    return self
+
+@meta.add_method(nodes.Call)
+def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
+    new_mangler = copy.copy(_mangler)
+    for name in self._type.split('@')[:-1]:
+        new_mangler.container(name)
+    new_mangler.enable()
+    self.call_expr.value = new_mangler.name(self._type.split('@')[-1]).callable().mangle()
     print(self)
     return self
