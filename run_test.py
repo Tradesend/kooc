@@ -1,11 +1,11 @@
-#!/bin/python3
+#!/usr/bin/python3
 
 import sys, os, subprocess
 
 if not os.path.isfile(sys.argv[1]):
     sys.exit('File not found : ' + sys.argv[1])
 
-cmd = ['python', '__main__.py', sys.argv[1]]
+cmd = ['python3', '__main__.py', sys.argv[1]]
 p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
 out, err = p.communicate()
 

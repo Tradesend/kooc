@@ -225,7 +225,8 @@ def kooc_resolution(self: nodes.KoocId, ast: cnorm.nodes.BlockStmt, _manger: man
 
 
 def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl, parents: list):
-    vtable_mangler = copy.copy(_mangler)
+    vtable_mangler = copy.deepcopy(_mangler)
+    vtable_mangler.container(klass.class_name)
     res = cnorm.nodes.Decl('', cnorm.nodes.ComposedType('__6vtable' + name))
     res._ctype.fields = []
     res._ctype._specifier = 1
@@ -250,8 +251,8 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
                 _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
                     [_this] + declaration._ctype._params)
                 res._ctype.fields.append(_declaration_pointer)
-
-    _typedef = cnorm.nodes.Decl('__6vtable' + vtable_mangler.type_definition().name(klass.class_name).mangle(),
+    
+    _typedef = cnorm.nodes.Decl('__6vtable' + _mangler.type_definition().name(klass.class_name).mangle(),
                                 cnorm.nodes.ComposedType(res._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
     _typedef._ctype._specifier = 1
@@ -279,8 +280,8 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
                                                   and _parents == parent_name.scope else None))
 
     self._ctype._identifier = _mangler.name(self._ctype._identifier).class_definition().mangle()
-    _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(self._ctype._identifier))
-    vtable = make_vtable(self, self._ctype._identifier, new_mangler, _this, supers)
+    _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(_mangler.type_definition().mangle()))
+    vtable = make_vtable(self, self._ctype._identifier, _mangler, _this, supers)
 
     _typedef = cnorm.nodes.Decl(_mangler.type_definition().mangle(), cnorm.nodes.ComposedType(self._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -301,9 +302,10 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
             methods_declaration.append(method)
         elif type(method) is nodes.Constructor:
             newer = copy.deepcopy(method)
-            method._ctype._params = [_this] + method._ctype._params
+            method._ctype._params = [_this, cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(vtable[1]._name))] + method._ctype._params
             method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
             newer._name = method_mangler.name("new").params(newer._ctype._params).mangle()
+            newer._ctype._identifier = _typedef._name;
             methods_declaration.append(method)
             methods_declaration.append(newer)
         elif type(method) is nodes.Constructor:
@@ -331,7 +333,7 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     nm.pop(nodes.Constructor)
     nm.pop(nodes.Method)
 
-    return methods_declaration + vtable + [self, _typedef]
+    return [_typedef, vtable[1]] + methods_declaration + [vtable[0]] + [self]
 
 
 def verify_parameters(l1: list, l2: list):
@@ -372,7 +374,7 @@ def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.
     inner_vtable_init_for_virtuality = [virtual for virtual in klass._ctype.fields if
                                         type(virtual) is nodes.Method and
                                         virtual.accessibility.virtual is True]
-    inner_vtable_init_for_virtuality_stringified = '\n'.join(["vtable.{0} = &{1};".format(
+    inner_vtable_init_for_virtuality_stringified = '\n'.join(["vtable->{0} = &{1};".format(
         vtable_init_mangler.callable().params([_this] + virtual._ctype._params).type(
             virtual._ctype._identifier).name(virtual._name).mangle(),
         vtable_init_mangler.virtual().params([_this] + virtual._ctype._params).name(virtual._name).type(
@@ -381,7 +383,7 @@ def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.
 
     for key, methods in _override_table.items():
         if key is 0:
-            inner_vtable_init_for_virtuality_stringified += '\n'.join(["vtable.{0} = &{1};".format(
+            inner_vtable_init_for_virtuality_stringified += '\n'.join(["vtable->{0} = &{1};".format(
                 vtable_init_mangler.callable().params([_this] + override._ctype._params).type(
                     override._ctype._identifier).name(override._name).mangle(),
                 vtable_init_mangler.virtual().params([_this] + override._ctype._params).name(override._name).type(

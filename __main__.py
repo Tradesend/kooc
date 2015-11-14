@@ -8,6 +8,7 @@ from kooc import Kooc
 from compiler import information
 from cnorm.parsing.expression import Idset
 from cnorm.passes import to_c
+from cnorm.nodes import Raw
 from ast import resolution
 
 cooker = Kooc()
@@ -18,6 +19,7 @@ if not os.path.isfile(filename):
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[1])))
 information.File.name = sys.argv[1]
 res = cooker.parse_file(filename)
+res.body.insert(0, Raw('#include <stdlib.h>\n'))
 Idset['class'] = "specifier_block"
 
 #print(res.to_yml())
