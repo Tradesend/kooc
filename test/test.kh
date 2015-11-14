@@ -1,4 +1,3 @@
 int main() {
-    i->TATA;
-    @get(TOTO@TATA)(i);
+    @call(TOTO@A)(a);
 }
