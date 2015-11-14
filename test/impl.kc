@@ -3,7 +3,7 @@
 
 @definition(NAMESPACE) {
     @implementation(CLASS) {
-        int    method(int) {
+        int    method(int a) {
 
         }
         @constructor(int a, char* av) {
@@ -13,6 +13,4 @@
 }
 int main(){
     NAMESPACE@CLASS var;
-
-    var->toto();
 }
