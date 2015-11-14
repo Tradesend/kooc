@@ -11,7 +11,7 @@ class Implementation(grammar.Grammar):
     entry = "translation_unit"
     grammar = """
             declaration = [
-                "@implementation" __scope__:current_block '(' id:implementation_name ')' #create_implementation(_, implementation_name, current_block)
+                "@implementation" __scope__:implementation __scope__:current_block '(' id:implementation_name ')' #create_implementation(_, implementation_name, current_block, implementation)
                 '{' [ method_implementation | ctor_implementation | dtor_implementation ]* '}' #end_implementation(_)
                 ';'
             ]
@@ -49,9 +49,10 @@ class Implementation(grammar.Grammar):
 
 
 @meta.hook(Implementation)
-def create_implementation(self: Implementation, context, implementation_name: str, current_block):
+def create_implementation(self: Implementation, context, implementation_name: str, current_block, implementation):
     context.set(nodes.Impl(self.value(implementation_name)))
     current_block.ref = context
+    implementation.ref = context
     return True
 
 

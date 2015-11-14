@@ -40,9 +40,7 @@ class Klass(grammar.Grammar):
             ]
             dtor = [
                 __scope__:local_specifier
-                "@" !!"destructor"
-                #Declaration.create_ctype(local_specifier)
-                declarator:decl
+                "@" !!"destructor" '(' ')'
                 callable:callable
                 ';' #create_dtor(decl, current_block, callable)
             ]
@@ -98,6 +96,7 @@ def create_class(self: Klass, context, class_name, current_block):
     context.set(nodes.Class(self.value(class_name)))
     current_block.ref = context
     return True
+
 
 @meta.hook(Klass)
 def push_inheritence(self: Klass, context: nodes.Class, super_class: nodes.KoocId):

@@ -18,5 +18,5 @@ information.File.name = sys.argv[1]
 res = cooker.parse_file(filename)
 Idset['class'] = "specifier_block"
 
-#print(res.to_yml())
+print(res.to_yml())
 print(res.kooc_resolution(copy.deepcopy(res)).to_c())

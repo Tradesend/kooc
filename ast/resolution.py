@@ -323,7 +323,7 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
         for it, _super in enumerate(supers[:1]):
             inheritence.append(cnorm.nodes.Decl('parent_{0}'.format(str(1 + it)), cnorm.nodes.PrimaryType(
                 '__6vtable' + _mangler.name(supers[0]._ctype._identifier).type_definition().mangle())))
-            inheritence.append(cnorm.nodes.Decl('parent_vtable_{0}'.format(str(1 +it)), cnorm.nodes.ComposedType(
+            inheritence.append(cnorm.nodes.Decl('parent_vtable_{0}'.format(str(1 + it)), cnorm.nodes.ComposedType(
                 _mangler.name(supers[0]._ctype._identifier).vtable_definition().mangle())))
             inheritence[len(inheritence) - 1]._ctype._specifier = 1
         self._ctype.fields = inheritence + self._ctype.fields
@@ -418,6 +418,25 @@ def generate_override_table(self: nodes.Impl, klass: nodes.Class, ast, methods_p
     return _override_table
 
 
+@meta.add_method(nodes.MethodImplementation)
+def kooc_resolution(self: nodes.MethodImplementation, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
+    if hasattr(self, 'virtual'):
+        self._name = _mangler.virtual().name(self._name).mangle()
+        _callable = (kooc.Kooc().parse("""int main() {
+            int vtable = ((void*)this) - 8;
+            return (double)(vtable->""" + _mangler.callable().mangle() + """)(""" + ', '.join([p._name for p in self._ctype._params]) + """);
+        }""")).body[0]
+        _callable._name = _mangler.callable().mangle()
+        _callable._ctype._params = self._ctype._params
+        _callable._ctype._identifier = self._ctype._identifier
+        _callable.body.body[1].expr.params[0]._identifier = self._ctype._identifier
+        _callable.body.body[0]._ctype._identifier = '__6vtable' + self._ctype._params[0]._ctype._identifier
+        return [self, _callable]
+    else:
+        self._name = _mangler.callable().name(self._name).mangle()
+        return self
+
+
 @meta.add_method(nodes.Impl)
 def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
     impl_mangler = copy.copy(_mangler)
@@ -480,6 +499,9 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
             generated_function.append(
                 construct_new_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler))
             fill_constructor(methodImpl, klass, copy.copy(impl_mangler), _this, _override_table)
+        if type(methods_pair[methodImpl._name]) is nodes.Method and (methods_pair[
+            methodImpl._name].accessibility.virtual is True or methods_pair[methodImpl._name].accessibility.override is True):
+            methodImpl.virtual = True
 
         methods_pair[methodImpl._name].defined = True
 
@@ -498,3 +520,25 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
                       self.name, file=sys.stderr)
 
     return sub_resolution(self.body + generated_function, ast, impl_mangler, parents)
+
+
+@meta.add_method(nodes.New)
+def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
+    new_mangler = copy.copy(_mangler)
+    for name in self._type.split('@'):
+        new_mangler.container(name)
+    new_mangler.enable()
+    self.call_expr.value = new_mangler.name('new').callable().mangle()
+    print(self)
+    return self
+
+
+@meta.add_method(nodes.Delete)
+def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents: list):
+    new_mangler = copy.copy(_mangler)
+    for name in self._type.split('@'):
+        new_mangler.container(name)
+    new_mangler.enable()
+    self.call_expr.value = new_mangler.name('new').callable().mangle()
+    print(self)
+    return self
