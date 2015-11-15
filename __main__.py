@@ -25,5 +25,5 @@ res = cooker.parse_file(filename)
 res.body.insert(0, Raw('#include <stdlib.h>\n'))
 Idset['class'] = "specifier_block"
 
-#print(res.to_yml())
+#print('\n'.join([r.to_yml() for r in res.body]))
 print(res.kooc_resolution(copy.deepcopy(res)).to_c())
