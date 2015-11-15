@@ -9,7 +9,28 @@
 
         }
     };
+    @implementation(ap) {
+        @destructor() {
+
+        }
+        @constructor() {
+
+        }
+    };
     @implementation(b) {
+        @constructor() {
+
+        }
+
+        @destructor() {
+
+        }
+
+        void    methode() {
+
+        }
+    };
+    @implementation(c) {
         @constructor() {
 
         }

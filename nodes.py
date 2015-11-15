@@ -26,6 +26,7 @@ class Class(nodes.Decl):
         self._ctype.fields = []
         self.class_name = name
         self.parents = []
+        self._ctype._attr_composed = ['__attribute__((packed)) ']
 
 class Impl(nodes.BlockStmt):
     def __init__(self, name: str) -> object:
