@@ -2,20 +2,30 @@
 
 import sys, os, subprocess
 
-if not os.path.isfile(sys.argv[1]):
-    sys.exit('File not found : ' + sys.argv[1])
+def main(av):
+    if not os.path.isfile(av):
+        sys.exit('File not found : ' + av)
+    koocinator(av)
 
-cmd = ['python3', '__main__.py', sys.argv[1]]
-p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-out, err = p.communicate()
+def koocinator(path):
+    cmd = ['python3', '__main__.py', path]
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    out, err = p.communicate()
+    fname, ext = path.split('.')
+    if ext == 'kc':
+        fname += '.c'
+    elif ext == 'kh':
+        fname += '.h'
+    txt = out.decode('utf-8')
+    if '# include ' in txt:
+        l = txt.split('\n')
+        for li in l:
+            if '# include ' in li:
+                main(li.split('\"')[1].replace('.h', '.kh'))
+    with open(fname, 'w') as infile:
+        infile.write(txt)
+    if ext == 'kc':
+        os.system('gcc ' + fname + ' -o ' + fname.split('.')[0])
 
-fname, ext = sys.argv[1].split('.')
-# fname = fname.split('/')[1:][0]
-if ext == 'kc':
-    fname += '.c'
-elif ext == 'kh':
-    fname += '.h'
-with open(fname, 'w') as infile:
-    infile.write(out.decode('utf-8'))
-if ext == 'kc':
-    os.system('gcc ' + fname + ' -o ' + fname.split('.')[0])
+for av in sys.argv[1:]:
+    main(av)
