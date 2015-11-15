@@ -224,7 +224,7 @@ def kooc_resolution(self: nodes.KoocId, ast: cnorm.nodes.BlockStmt, _manger: man
     return self
 
 
-def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl, parents: list):
+def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl, parents: list, ast):
     vtable_mangler = copy.deepcopy(_mangler)
     vtable_mangler.container(klass.class_name)
     res = cnorm.nodes.Decl('', cnorm.nodes.ComposedType('__6vtable' + name))
@@ -240,18 +240,20 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
             _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
                 [_this] + declaration._ctype._params)
             res._ctype.fields.append(_declaration_pointer)
-    for parent in parents:
-        for declaration in parent._ctype.fields:
-            if type(declaration) is not nodes.Attribute and declaration.accessibility.virtual is True:
-                _declaration_pointer = cnorm.nodes.Decl(
-                    vtable_mangler.name(declaration._name).type(declaration._ctype._identifier).params(
-                        declaration._ctype._params).callable().mangle(),
-                    cnorm.nodes.PrimaryType(declaration._ctype._identifier))
-                _declaration_pointer._ctype._decltype = cnorm.nodes.PointerType()
-                _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
-                    [_this] + declaration._ctype._params)
-                res._ctype.fields.append(_declaration_pointer)
-
+    if len(parents):
+        self = parents[0]
+        super_supers = []
+        for parent_name in self.parents:
+            _parent = ast.search_in_tree(lambda super, _parents:
+                                             super if type(super) is nodes.Class
+                                                      and super.class_name == parent_name.value
+                                                      and _parents == parent_name.scope else None)
+            if _parent is None:
+                print("error: super class of " + self.class_name + " named " + '@'.join(parent_name.scope + [parent_name.value]) + " doesn't exist", file=sys.stderr)
+                exit(-1)
+            super_supers.append(_parent)
+        _super_this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(_mangler.name(klass.class_name).type_definition().mangle()))
+        res._ctype.fields += make_vtable(parents[0], _mangler.class_definition().name(klass.class_name).mangle(), _mangler, _super_this, super_supers, ast)[0]._ctype.fields
     _typedef = cnorm.nodes.Decl('__6vtable' + _mangler.type_definition().name(klass.class_name).mangle(),
                                 cnorm.nodes.ComposedType(res._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -274,14 +276,18 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
 
     supers = []
     for parent_name in self.parents:
-        supers.append(ast.search_in_tree(lambda super, _parents:
+        _parent = ast.search_in_tree(lambda super, _parents:
                                          super if type(super) is nodes.Class
                                                   and super.class_name == parent_name.value
-                                                  and _parents == parent_name.scope else None))
+                                                  and _parents == parent_name.scope else None)
+        if _parent is None:
+            print("error: super class of " + self.class_name + " named " + '@'.join(parent_name.scope + [parent_name.value]) + " doesn't exist", file=sys.stderr)
+            exit(-1)
+        supers.append(_parent)
 
     self._ctype._identifier = _mangler.name(self._ctype._identifier).class_definition().mangle()
     _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(_mangler.type_definition().mangle()))
-    vtable = make_vtable(self, self._ctype._identifier, _mangler, _this, supers)
+    vtable = make_vtable(self, self._ctype._identifier, _mangler, _this, supers, ast)
 
     _typedef = cnorm.nodes.Decl(_mangler.type_definition().mangle(), cnorm.nodes.ComposedType(self._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -312,24 +318,21 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
         elif type(method) is nodes.Destructor:
             newer = copy.deepcopy(method)
             method._ctype._params = [_this] + method._ctype._params
+            if method.accessibility.virtual is True:
+                virtual = copy.deepcopy(method)
+                method_mangler._symtype = "__7virtual"
+                virtual._name = method_mangler.name(method._name).mangle()
+                methods_declaration.append(virtual)
             method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
-            newer._name = method_mangler.name("delete").params(method._ctype._params).mangle()
+            newer._name = method_mangler.name("delete").mangle()
             methods_declaration.append(method)
             methods_declaration.append(newer)
 
     self._ctype.fields = sub_resolution(self._ctype.fields, ast, new_mangler, parents)
-    if len(supers) > 0:
-        inheritence = []
-        inheritence.append(cnorm.nodes.Decl('parent_0', cnorm.nodes.ComposedType(
-            _mangler.name(supers[0]._ctype._identifier).class_definition().mangle())))
-        inheritence[len(inheritence) - 1]._ctype._specifier = 1
-        for it, _super in enumerate(supers[:1]):
-            inheritence.append(cnorm.nodes.Decl('parent_{0}'.format(str(1 + it)), cnorm.nodes.PrimaryType(
-                '__6vtable' + _mangler.name(supers[0]._ctype._identifier).type_definition().mangle())))
-            inheritence.append(cnorm.nodes.Decl('parent_vtable_{0}'.format(str(1 + it)), cnorm.nodes.ComposedType(
-                _mangler.name(supers[0]._ctype._identifier).vtable_definition().mangle())))
-            inheritence[len(inheritence) - 1]._ctype._specifier = 1
-        self._ctype.fields = inheritence + self._ctype.fields
+    for _super in reversed(supers):
+        res = copy.deepcopy(_super).kooc_resolution(ast, _mangler, parents)
+        self._ctype.fields = res[-1]._ctype.fields + self._ctype.fields
+        self._ctype.fields.insert(0, cnorm.nodes.Decl('__6vtable__' + str(len(_super.class_name)) + _super.class_name, cnorm.nodes.PrimaryType(res[1]._ctype._identifier)))
     nm.pop(nodes.Destructor)
     nm.pop(nodes.Constructor)
     nm.pop(nodes.Method)
@@ -407,7 +410,7 @@ def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.
             inner_vtable_init_for_virtuality_stringified += '\n'.join(["vtable->{0} = &{1};".format(
                 vtable_init_mangler.callable().params([_this] + override._ctype._params).type(
                     override._ctype._identifier).name(override._name).mangle(),
-                vtable_init_mangler.virtual().params([_this] + override._ctype._params).name(override._name).type(
+                vtable_init_mangler.callable().params([_this] + override._ctype._params).name(override._name).type(
                     override._ctype._identifier).mangle()
             ) for override in methods])
         else:
@@ -546,14 +549,10 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
             generated_function.append(
                 construct_delete_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler))
         if type(methods_pair[methodImpl._name]) is nodes.Method and (methods_pair[
-                                                                         methodImpl._name].accessibility.virtual is True or
-                                                                             methods_pair[
-                                                                                 methodImpl._name].accessibility.override is True):
+                                                                         methodImpl._name].accessibility.virtual is True):
             methodImpl.virtual = True
         if type(methods_pair[methodImpl._name]) is nodes.Destructor and (methods_pair[
-                                                                             methodImpl._name].accessibility.virtual is True or
-                                                                                 methods_pair[
-                                                                                     methodImpl._name].accessibility.override is True):
+                                                                             methodImpl._name].accessibility.virtual is True):
             methodImpl.virtual = True
 
         methods_pair[methodImpl._name].defined = True

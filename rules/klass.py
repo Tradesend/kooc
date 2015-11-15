@@ -21,7 +21,7 @@ class Klass(grammar.Grammar):
                         [ super_class:super_class #push_inheritence(_, super_class) ]?
                         [ ',' super_class:super_class #push_inheritence(_, super_class)]*
                     ] ')'
-                '{' [ inner_class | Klass.ctor | Klass.dtor ]* "};" #end_class_definition(_)
+                '{' [ inner_class | Klass.dtor | Klass.ctor ]* "};" #end_class_definition(_)
             ]
             super_class = [
                 @ignore("null") [

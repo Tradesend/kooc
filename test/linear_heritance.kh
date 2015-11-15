@@ -1,0 +1,16 @@
+@namespace(n) {
+    @class a() {
+        @constructor()       @callable();
+        @destructor()       @callable(virtual);
+
+        int a               @property();
+    };
+    @class b(n@a) {
+        @constructor()       @callable();
+        @destructor()       @callable(override);
+
+        void    methode()   @callable(virtual);
+
+        int b               @property();
+    };
+};

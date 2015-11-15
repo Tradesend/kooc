@@ -1,0 +1,25 @@
+@import(linear_heritance)
+
+@definition(n) {
+    @implementation(a) {
+        @destructor() {
+
+        }
+        @constructor() {
+
+        }
+    };
+    @implementation(b) {
+        @constructor() {
+
+        }
+
+        @destructor() {
+
+        }
+
+        void    methode() {
+
+        }
+    };
+}

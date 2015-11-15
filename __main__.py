@@ -13,6 +13,9 @@ from ast import resolution
 
 cooker = Kooc()
 
+if len(sys.argv) < 2:
+    sys.exit("Please specify a file")
+
 filename = os.path.abspath(sys.argv[1])
 if not os.path.isfile(filename):
     sys.exit("Couldn't find specified file in : " + filename)
