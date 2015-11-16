@@ -13,6 +13,9 @@ from ast import resolution
 
 cooker = Kooc()
 
+if len(sys.argv) < 2:
+    sys.exit("Please specify a file")
+
 filename = os.path.abspath(sys.argv[1])
 if not os.path.isfile(filename):
     sys.exit("Couldn't find specified file in : " + filename)
@@ -22,5 +25,4 @@ res = cooker.parse_file(filename)
 res.body.insert(0, Raw('#include <stdlib.h>\n'))
 Idset['class'] = "specifier_block"
 
-#print(res.to_yml())
 print(res.kooc_resolution(copy.deepcopy(res)).to_c())

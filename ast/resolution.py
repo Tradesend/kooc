@@ -139,6 +139,15 @@ def identifier_mangling(identifier: str):
     new_mangler.type_definition()
     return new_mangler.name(name).mangle()
 
+@meta.add_method(cnorm.nodes.PrimaryType)
+def kooc_resolution(self: cnorm.nodes.PrimaryType, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
+    ctype_mangler = copy.copy(_mangler)
+    ctype_mangler.enable()
+    if '@' in self._identifier:
+        for n in self._identifier.split('@')[:-1]:
+            ctype_mangler.container(n)
+        self._identifier = ctype_mangler.name(self._identifier.split('@')[-1]).type_definition().mangle()
+    return self
 
 @meta.add_method(cnorm.nodes.Decl)
 def kooc_resolution(self: cnorm.nodes.Decl, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
@@ -146,7 +155,7 @@ def kooc_resolution(self: cnorm.nodes.Decl, ast: cnorm.nodes.BlockStmt, _mangler
     if res is not None:
         if hasattr(res, '_ctype'):
             if res._ctype._storage == 0:
-                _mangler.type(res._ctype._identifier)
+                _mangler.type(res._ctype._identifier).variable()
                 if hasattr(res._ctype, '_params'):
                     _mangler.callable().params(res._ctype._params)
             elif res._ctype._storage == 2 or res._ctype._storage == 1:
@@ -224,12 +233,13 @@ def kooc_resolution(self: nodes.KoocId, ast: cnorm.nodes.BlockStmt, _manger: man
     return self
 
 
-def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl, parents: list):
+def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this: cnorm.nodes.Decl, parents: list, ast):
     vtable_mangler = copy.deepcopy(_mangler)
     vtable_mangler.container(klass.class_name)
     res = cnorm.nodes.Decl('', cnorm.nodes.ComposedType('__6vtable' + name))
     res._ctype.fields = []
     res._ctype._specifier = 1
+    res._ctype._attr_composed = ['__attribute__((packed)) ']
     for declaration in klass._ctype.fields:
         if type(declaration) is not nodes.Attribute and declaration.accessibility.virtual is True:
             _declaration_pointer = cnorm.nodes.Decl(
@@ -240,18 +250,24 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
             _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
                 [_this] + declaration._ctype._params)
             res._ctype.fields.append(_declaration_pointer)
-    for parent in parents:
-        for declaration in parent._ctype.fields:
-            if type(declaration) is not nodes.Attribute and declaration.accessibility.virtual is True:
-                _declaration_pointer = cnorm.nodes.Decl(
-                    vtable_mangler.name(declaration._name).type(declaration._ctype._identifier).params(
-                        declaration._ctype._params).callable().mangle(),
-                    cnorm.nodes.PrimaryType(declaration._ctype._identifier))
-                _declaration_pointer._ctype._decltype = cnorm.nodes.PointerType()
-                _declaration_pointer._ctype._decltype._decltype = cnorm.nodes.ParenType(
-                    [_this] + declaration._ctype._params)
-                res._ctype.fields.append(_declaration_pointer)
-
+    if len(parents):
+        self = parents[0]
+        super_supers = []
+        for parent_name in self.parents:
+            _parent = ast.search_in_tree(lambda super, _parents:
+                                         super if type(super) is nodes.Class
+                                                  and super.class_name == parent_name.value
+                                                  and _parents == parent_name.scope else None)
+            if _parent is None:
+                print("error: super class of " + self.class_name + " named " + '@'.join(
+                    parent_name.scope + [parent_name.value]) + " doesn't exist", file=sys.stderr)
+                exit(-1)
+            super_supers.append(_parent)
+        _super_this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(
+            _mangler.name(klass.class_name).type_definition().mangle()))
+        res._ctype.fields = \
+        make_vtable(parents[0], _mangler.class_definition().name(klass.class_name).mangle(), _mangler, _super_this,
+                    super_supers, ast)[0]._ctype.fields + res._ctype.fields
     _typedef = cnorm.nodes.Decl('__6vtable' + _mangler.type_definition().name(klass.class_name).mangle(),
                                 cnorm.nodes.ComposedType(res._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -274,14 +290,19 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
 
     supers = []
     for parent_name in self.parents:
-        supers.append(ast.search_in_tree(lambda super, _parents:
-                                         super if type(super) is nodes.Class
-                                                  and super.class_name == parent_name.value
-                                                  and _parents == parent_name.scope else None))
+        _parent = ast.search_in_tree(lambda super, _parents:
+                                     super if type(super) is nodes.Class
+                                              and super.class_name == parent_name.value
+                                              and _parents == parent_name.scope else None)
+        if _parent is None:
+            print("error: super class of " + self.class_name + " named " + '@'.join(
+                parent_name.scope + [parent_name.value]) + " doesn't exist", file=sys.stderr)
+            exit(-1)
+        supers.append(_parent)
 
     self._ctype._identifier = _mangler.name(self._ctype._identifier).class_definition().mangle()
     _this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(_mangler.type_definition().mangle()))
-    vtable = make_vtable(self, self._ctype._identifier, _mangler, _this, supers)
+    vtable = make_vtable(self, self._ctype._identifier, _mangler, _this, supers, ast)
 
     _typedef = cnorm.nodes.Decl(_mangler.type_definition().mangle(), cnorm.nodes.ComposedType(self._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -310,26 +331,29 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
             methods_declaration.append(method)
             methods_declaration.append(newer)
         elif type(method) is nodes.Destructor:
-            newer = copy.deepcopy(method)
             method._ctype._params = [_this] + method._ctype._params
+            newer = copy.deepcopy(method)
+            if method.accessibility.virtual is True:
+                virtual = copy.deepcopy(method)
+                method_mangler._symtype = "__7virtual"
+                virtual._name = method_mangler.name(method._name).mangle()
+                methods_declaration.append(virtual)
             method._name = method_mangler.name(method._name).callable().params(method._ctype._params).mangle()
-            newer._name = method_mangler.name("delete").params(method._ctype._params).mangle()
+            newer._name = method_mangler.name("delete").mangle()
             methods_declaration.append(method)
             methods_declaration.append(newer)
 
     self._ctype.fields = sub_resolution(self._ctype.fields, ast, new_mangler, parents)
-    if len(supers) > 0:
-        inheritence = []
-        inheritence.append(cnorm.nodes.Decl('parent_0', cnorm.nodes.ComposedType(
-            _mangler.name(supers[0]._ctype._identifier).class_definition().mangle())))
-        inheritence[len(inheritence) - 1]._ctype._specifier = 1
-        for it, _super in enumerate(supers[:1]):
-            inheritence.append(cnorm.nodes.Decl('parent_{0}'.format(str(1 + it)), cnorm.nodes.PrimaryType(
-                '__6vtable' + _mangler.name(supers[0]._ctype._identifier).type_definition().mangle())))
-            inheritence.append(cnorm.nodes.Decl('parent_vtable_{0}'.format(str(1 + it)), cnorm.nodes.ComposedType(
-                _mangler.name(supers[0]._ctype._identifier).vtable_definition().mangle())))
-            inheritence[len(inheritence) - 1]._ctype._specifier = 1
-        self._ctype.fields = inheritence + self._ctype.fields
+    for _super in reversed(supers):
+        res = copy.deepcopy(_super).kooc_resolution(ast, _mangler, parents)
+        self._ctype.fields = res[-1]._ctype.fields + self._ctype.fields
+        self._ctype.fields.insert(0, cnorm.nodes.Decl(
+            '__6vtable__' + str(len(self.class_name)) + self.class_name + '__' + str(
+                len(_super.class_name)) + _super.class_name, cnorm.nodes.PrimaryType(res[1]._name)))
+        self._ctype.fields[0]._ctype._decltype = cnorm.nodes.PointerType()
+    if len(supers):
+        self._ctype.fields = self._ctype.fields[1:]
+
     nm.pop(nodes.Destructor)
     nm.pop(nodes.Constructor)
     nm.pop(nodes.Method)
@@ -349,7 +373,7 @@ def construct_delete_operator(methodDef: nodes.Destructor, methodImpl: nodes.Des
                               impl_mangler: mangler.Mangler):
     new_operator_mangler = copy.copy(impl_mangler)
     ret = cnorm.nodes.Decl('delete', copy.deepcopy(methodImpl._ctype))
-    ret._ctype._identifier = _this._ctype._identifier
+    ret._ctype._identifier = 'void'
     new_gen = kooc.Kooc()
     ret.body = kooc.Kooc().parse("""
         void delete() {
@@ -366,7 +390,7 @@ def construct_delete_operator(methodDef: nodes.Destructor, methodImpl: nodes.Des
 
 def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.ConstructorImplementation,
                            _this: cnorm.nodes.Decl,
-                           impl_mangler: mangler.Mangler):
+                           impl_mangler: mangler.Mangler, gen_klass: nodes.Class):
     new_operator_mangler = copy.copy(impl_mangler)
     ret = cnorm.nodes.Decl('new', copy.deepcopy(methodDef._ctype))
     ret._ctype._identifier = _this._ctype._identifier
@@ -374,13 +398,15 @@ def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.Const
     ret.body = kooc.Kooc().parse("""
         int new() {
             int this;
-            int vtable;
-            this = sizeof(void*) + malloc(sizeof(void*) + sizeof(*this));
+            int* vtable;
+            this = sizeof(void*) + malloc(sizeof(void*) + sizeof(*this));""" +
+    '\n'.join(["this->" + n._name + " = malloc(sizeof(void*));\n *(this->" + n._name + ") = malloc(sizeof(*(this->" + n._name + ")));" for n in gen_klass._ctype.fields if n._name.startswith('__6vtable')])
+        + """
             vtable = ((void*)this) - sizeof(void*);
-            vtable = malloc(sizeof(*vtable));
+            *vtable = malloc(sizeof(**vtable));
             """ + new_operator_mangler.name(methodDef._name).callable().type('void').params(
         methodImpl._ctype._params).mangle() + "({0})".format(
-        ', '.join([decl._name for decl in methodImpl._ctype._params])
+        ', '.join([decl._name for decl in methodImpl._ctype._params]).replace("vtable", "*vtable")
     ) + """;
             return this;
         }
@@ -393,7 +419,7 @@ def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.Const
 def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.Class,
                      vtable_init_mangler: mangler.Mangler, _this, _override_table: dict):
     inner_vtable_init_for_virtuality = [virtual for virtual in klass._ctype.fields if
-                                        type(virtual) is nodes.Method and
+                                        (type(virtual) is nodes.Method or type(virtual) is nodes.Destructor) and
                                         virtual.accessibility.virtual is True]
     inner_vtable_init_for_virtuality_stringified = '\n'.join(["vtable->{0} = &{1};".format(
         vtable_init_mangler.callable().params([_this] + virtual._ctype._params).type(
@@ -402,42 +428,46 @@ def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.
             virtual._ctype._identifier).mangle()
     ) for virtual in inner_vtable_init_for_virtuality])
 
-    for key, methods in _override_table.items():
-        if key is 0:
-            inner_vtable_init_for_virtuality_stringified += '\n'.join(["vtable->{0} = &{1};".format(
-                vtable_init_mangler.callable().params([_this] + override._ctype._params).type(
-                    override._ctype._identifier).name(override._name).mangle(),
-                vtable_init_mangler.virtual().params([_this] + override._ctype._params).name(override._name).type(
-                    override._ctype._identifier).mangle()
-            ) for override in methods])
-        else:
-            inner_vtable_init_for_virtuality_stringified += '\n'.join(["this->parent_{2}_vtable.{0} = &{1};".format(
-                vtable_init_mangler.callable().params([_this] + override._ctype._params).type(
-                    override._ctype._identifier).name(override._name).mangle(),
-                vtable_init_mangler.virtual().params([_this] + override._ctype._params).name(override._name).type(
-                    override._ctype._identifier).mangle(), key
-            ) for override in methods])
-
-    constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + "}").body[
+    _overriding_table = []
+    if len(klass.parents):
+        for name, override in _override_table.items():
+            for _override in override:
+                if _override["pre"] is True:
+                    _overriding_table.insert(0, "vtable->{0} = &{1};".format(
+                        '___' + '___'.join([str(len(n)) + n for n in _override['name']]) + '__8callable__' + str(len(name)) + name,
+                        vtable_init_mangler.callable().name(name).mangle()
+                    ))
+                else:
+                    _overriding_table.insert(0, "(*(this->{0}))->{1} = &{2};".format(
+                        _override['vtable'],
+                        '___' + '___'.join([str(len(n)) + n for n in _override['name']]) + '__8callable__' + str(len(name)) + name,
+                        vtable_init_mangler.callable().name(name).mangle()
+                    ))
+    constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + '\n'.join(_overriding_table) + "}").body[
                                 0].body.body + constructor.body.body
     pass
 
 
-def generate_override_table(self: nodes.Impl, klass: nodes.Class, ast, methods_pair: dict):
-    _override_table = {}
+def generate_override_table(self: nodes.Impl, klass: nodes.Class, ast, methods_pair: dict, _override_table: dict):
     supers = []
     for parent_name in klass.parents:
-        supers.append(ast.search_in_tree(lambda __super, _parents:
+        _super = ast.search_in_tree(lambda __super, _parents:
                                          __super if type(__super) is nodes.Class
                                                     and __super.class_name == parent_name.value
-                                                    and _parents == parent_name.scope else None))
+                                                    and _parents == parent_name.scope else None)
+        generate_override_table(self, _super, ast, methods_pair, _override_table)
+        supers.append({"name": parent_name, "klass": _super}) #recurs to verif after eating time
     for methodImpl in self.body:
         if methods_pair[methodImpl._name].accessibility.override is True:
             for it, _super in enumerate(supers):
-                for methodDef in _super._ctype.fields:
-                    if it not in _override_table:
-                        _override_table[it] = []
-                    _override_table[it].append(methodImpl)
+                for methodDef in _super["klass"]._ctype.fields:
+                    if type(
+                            methodDef.accessibility) is nodes.Callable and methodDef.accessibility.virtual is True and methodDef._name == methodImpl._name:
+                        if methodImpl._name not in _override_table:
+                            _override_table[methodImpl._name] = []
+                        _override_table[methodImpl._name].insert(0, {"vtable": '__6vtable__' + str(
+                            len(klass.class_name)) + klass.class_name + '__' + str(
+                            len(_super["klass"].class_name)) + _super["klass"].class_name, "name": _super["name"].scope + [_super["name"].value], "pre": False if it > 0 else True})
     return _override_table
 
 
@@ -447,8 +477,8 @@ def kooc_resolution(self: nodes.MethodImplementation, ast: cnorm.nodes.BlockStmt
     if hasattr(self, 'virtual'):
         self._name = _mangler.virtual().name(self._name).mangle()
         _callable = (kooc.Kooc().parse("""int main() {
-            int vtable = ((void*)this) - 8;
-            return (double)(vtable->""" + _mangler.callable().mangle() + """)(""" + ', '.join(
+            int* vtable = ((void*)this) - 8;
+            return (double)((*vtable)->""" + _mangler.callable().mangle() + """)(""" + ', '.join(
             [p._name for p in self._ctype._params]) + """);
         }""")).body[0]
         _callable._name = _mangler.callable().mangle()
@@ -468,8 +498,8 @@ def kooc_resolution(self: nodes.MethodImplementation, ast: cnorm.nodes.BlockStmt
     if hasattr(self, 'virtual'):
         self._name = _mangler.virtual().name(self._name).mangle()
         _callable = (kooc.Kooc().parse("""int main() {
-            int vtable = ((void*)this) - 8;
-            return (double)(vtable->""" + _mangler.callable().mangle() + """)(""" + ', '.join(
+            int* vtable = ((void*)this) - 8;
+            return (double)((*vtable)->""" + _mangler.callable().mangle() + """)(""" + ', '.join(
             [p._name for p in self._ctype._params]) + """);
         }""")).body[0]
         _callable._name = _mangler.callable().mangle()
@@ -496,6 +526,7 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
         print("error: klass implementation: ", self.name, " doesn't match any declaration", file=sys.stderr)
         exit(0)
 
+    gen_klass = copy.deepcopy(klass).kooc_resolution(ast, _mangler, parents)[-1]
     _this = cnorm.nodes.Decl('this', cnorm.nodes.PrimaryType(
         impl_mangler.name(klass._ctype._identifier).type_definition().mangle()))
     _vtable = cnorm.nodes.Decl('vtable', cnorm.nodes.PrimaryType(
@@ -528,7 +559,8 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
 
         methods_pair[methodImpl._name] = methodDef
 
-    _override_table = generate_override_table(self, klass, ast, methods_pair)
+    _override_table = {}
+    generate_override_table(self, klass, ast, methods_pair, _override_table)
 
     generated_function = []
     impl_mangler.container(self.name)
@@ -539,21 +571,16 @@ def kooc_resolution(self: nodes.Impl, ast: cnorm.nodes.BlockStmt, _mangler: mang
         if type(methods_pair[methodImpl._name]) is nodes.Constructor:
             methodImpl._ctype._params.insert(1, _vtable)
             generated_function.append(
-                construct_new_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler))
+                construct_new_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler, gen_klass))
             fill_constructor(methodImpl, klass, copy.copy(impl_mangler), _this, _override_table)
         if type(methods_pair[methodImpl._name]) is nodes.Destructor:
-            methodImpl._ctype._params.insert(1, _vtable)
             generated_function.append(
                 construct_delete_operator(methods_pair[methodImpl._name], methodImpl, _this, impl_mangler))
         if type(methods_pair[methodImpl._name]) is nodes.Method and (methods_pair[
-                                                                         methodImpl._name].accessibility.virtual is True or
-                                                                             methods_pair[
-                                                                                 methodImpl._name].accessibility.override is True):
+                                                                         methodImpl._name].accessibility.virtual is True):
             methodImpl.virtual = True
         if type(methods_pair[methodImpl._name]) is nodes.Destructor and (methods_pair[
-                                                                             methodImpl._name].accessibility.virtual is True or
-                                                                                 methods_pair[
-                                                                                     methodImpl._name].accessibility.override is True):
+                                                                             methodImpl._name].accessibility.virtual is True):
             methodImpl.virtual = True
 
         methods_pair[methodImpl._name].defined = True
@@ -604,10 +631,9 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
     cast = cnorm.nodes.Cast(cnorm.nodes.Raw('()'),
                             [cnorm.nodes.PrimaryType(
                                 new_mangler.name(self._type.split('@')[-2]).type_definition().mangle()),
-                             self.params[0]])
+                                self.params[0]])
     self.params[0] = cast
-    for name in self._type.split('@')[:-1]:
-        new_mangler.container(name)
+    new_mangler.container(self._type.split('@')[-2])
     self.call_expr.value = new_mangler.name(self._type.split('@')[-1]).callable().mangle()
     return self
 

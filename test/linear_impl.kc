@@ -1,0 +1,55 @@
+#include <stdio.h>
+@import(linear_heritance)
+
+@definition(n) {
+    @implementation(a) {
+        @destructor() {
+
+        }
+        @constructor() {
+
+        }
+    };
+    @implementation(ap) {
+        @destructor() {
+
+        }
+        @constructor() {
+
+        }
+    };
+    @implementation(b) {
+        @constructor() {
+
+        }
+
+        @destructor() {
+
+        }
+
+        void    methode() {
+            printf("i'm a b\n");
+        }
+    };
+    @implementation(c) {
+        @constructor() {
+
+        }
+
+        @destructor() {
+
+        }
+
+        void    methode() {
+            printf("i'm a c\n");
+        }
+    };
+}
+
+int main() {
+    n@c c_object = @new(n@c)();
+    n@a a_object =(n@a)c_object;
+
+    @get(n@a@a)(c_object);
+    @call(n@b@methode)(c_object);
+}
