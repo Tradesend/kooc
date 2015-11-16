@@ -17,7 +17,7 @@ class Namespace(grammar.Grammar):
     grammar = """
         declaration = [
                         __scope__:current_block
-                        "@namespace(" id:namespace_name ')'
+                        "@namespace" "(" id:namespace_name ')'
                         #make_namespace(_, namespace_name, current_block)
                         '{' [ declaration ]* '}'
                         #depile_context(_)
@@ -56,6 +56,9 @@ class Namespace(grammar.Grammar):
 @meta.hook(Namespace)
 def make_namespace(self: Namespace, context, namespace_name, current_block) -> bool:
     context.set(nodes.Namespace(self.value(namespace_name)))
+    if hasattr(self.rule_nodes.parents['current_block'].ref, 'assembled_name'):
+        context.assembled_name = self.rule_nodes.parents['current_block'].ref.assembled_name + "@" + context.name
+        print(context.assembled_name)
     context.types = self.rule_nodes.parents['current_block'].ref.types.new_child()
     current_block.ref = context
     return True
@@ -65,7 +68,7 @@ def make_namespace(self: Namespace, context, namespace_name, current_block) -> b
 def depile_context(self: Namespace, context :nodes.Namespace):
     self.rule_nodes.parents['current_block'].ref.body.append(context)
     for value in context.types:
-        self.rule_nodes.parents['current_block'].ref.types["{0}@{1}".format(context.name, value)] = context.types[value]
+        self.rule_nodes.parents['current_block'].ref.types[value] = context.types[value]
     return True
 
 

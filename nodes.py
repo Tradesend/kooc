@@ -11,6 +11,7 @@ class Namespace(nodes.BlockStmt):
     def __init__(self, name: str) -> object:
         super().__init__([])
         self.name = name
+        self.assembled_name = name
 
 
 class Defn(nodes.BlockStmt):
@@ -27,6 +28,7 @@ class Class(nodes.Decl):
         self.class_name = name
         self.parents = []
         self._ctype._attr_composed = ['__attribute__((packed)) ']
+
 
 class Impl(nodes.BlockStmt):
     def __init__(self, name: str) -> object:
@@ -75,7 +77,8 @@ class Call(nodes.Func):
 
 class Set(nodes.ExprStmt):
     def __init__(self, type, call_expr, params):
-        super().__init__(nodes.Binary(nodes.Raw('='), [nodes.Arrow(params[0], [nodes.Id(type.split('@')[-1])]), params[1]]))
+        super().__init__(
+            nodes.Binary(nodes.Raw('='), [nodes.Arrow(params[0], [nodes.Id(type.split('@')[-1])]), params[1]]))
         self._type = type
 
 

@@ -94,6 +94,7 @@ class Klass(grammar.Grammar):
 @meta.hook(Klass)
 def create_class(self: Klass, context, class_name, current_block):
     context.set(nodes.Class(self.value(class_name)))
+    context.types = self.rule_nodes.parents['current_block'].ref.types.new_child()
     current_block.ref = context
     return True
 
@@ -107,7 +108,10 @@ def push_inheritence(self: Klass, context: nodes.Class, super_class: nodes.KoocI
 @meta.hook(Klass)
 def end_class_definition(self: Klass, context: nodes.Class):
     self.rule_nodes.parents['current_block'].ref.body.append(context)
-    self.rule_nodes.parents['current_block'].ref.types[context.class_name] = context
+    if hasattr(self.rule_nodes.parents['current_block'].ref, 'assembled_name'):
+        self.rule_nodes.parents['current_block'].ref.types[self.rule_nodes.parents['current_block'].ref.assembled_name + '@' + context.class_name] = context
+    else:
+        self.rule_nodes.parents['current_block'].ref.types[context.class_name] = context
     return True
 
 
