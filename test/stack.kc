@@ -8,22 +8,22 @@
       @set(system@stack@_next)(this, NULL);
     };
 
-    bool  push_back(char *type, void *ptr) {
+    int  push_back(char *type, void *ptr) {
       system@stack *tmp = this;
       while (tmp)
-        tmp = @get(system@stack@_next)(this);
+        tmp = @get(system@stack@_next)(tmp);
       @set(system@stack@_next)(tmp, @new(system@stack)(type, ptr));
-      return true;
+      return 0;
     };
 
-    bool  pop_back() {
+    int  pop_back() {
       system@stack *tmp = this;
-      while (tmp && tmp->_next && tmp->_next->_next)
-        tmp = tmp->_next;
-      if (!tmp->_next)
-        return false;
+      while (tmp && @get(system@stack@_next)(this) && @get(system@stack@_next)(@get(system@stack@_next)(this)))
+        tmp = @get(system@stack@_next)(tmp);
+      if (!@get(system@stack@_next)(tmp))
+        return 1;
       tmp->_next = NULL;
-      return true;
+      return 0;
     };
   };
 };
