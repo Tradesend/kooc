@@ -139,15 +139,17 @@ def identifier_mangling(identifier: str):
     new_mangler.type_definition()
     return new_mangler.name(name).mangle()
 
+
 @meta.add_method(cnorm.nodes.PrimaryType)
 def kooc_resolution(self: cnorm.nodes.PrimaryType, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
-    ctype_mangler = copy.copy(_mangler)
+    ctype_mangler = mangler.Mangler()
     ctype_mangler.enable()
     if '@' in self._identifier:
         for n in self._identifier.split('@')[:-1]:
             ctype_mangler.container(n)
         self._identifier = ctype_mangler.name(self._identifier.split('@')[-1]).type_definition().mangle()
     return self
+
 
 @meta.add_method(cnorm.nodes.Decl)
 def kooc_resolution(self: cnorm.nodes.Decl, ast: cnorm.nodes.BlockStmt, _mangler: mangler.Mangler, parents):
@@ -266,8 +268,8 @@ def make_vtable(klass: nodes.Class, name: str, _mangler: mangler.Mangler, _this:
         _super_this = cnorm.nodes.Decl('', cnorm.nodes.PrimaryType(
             _mangler.name(klass.class_name).type_definition().mangle()))
         res._ctype.fields = \
-        make_vtable(parents[0], _mangler.class_definition().name(klass.class_name).mangle(), _mangler, _super_this,
-                    super_supers, ast)[0]._ctype.fields + res._ctype.fields
+            make_vtable(parents[0], _mangler.class_definition().name(klass.class_name).mangle(), _mangler, _super_this,
+                        super_supers, ast)[0]._ctype.fields + res._ctype.fields
     _typedef = cnorm.nodes.Decl('__6vtable' + _mangler.type_definition().name(klass.class_name).mangle(),
                                 cnorm.nodes.ComposedType(res._ctype._identifier))
     _typedef._ctype._decltype = cnorm.nodes.PointerType()
@@ -313,6 +315,8 @@ def kooc_resolution(self: nodes.Class, ast: cnorm.nodes.BlockStmt, _mangler: man
     methods_declaration = []
     for method in self._ctype.fields:
         if type(method) is nodes.Method:
+            for decl in method._ctype._params:
+                decl._ctype.kooc_resolution(ast, _mangler, parents)
             method._ctype._params = [_this] + method._ctype._params
             if method.accessibility.virtual is True:
                 virtual = copy.deepcopy(method)
@@ -400,8 +404,10 @@ def construct_new_operator(methodDef: nodes.Constructor, methodImpl: nodes.Const
             int this;
             int* vtable;
             this = sizeof(void*) + malloc(sizeof(void*) + sizeof(*this));""" +
-    '\n'.join(["this->" + n._name + " = malloc(sizeof(void*));\n *(this->" + n._name + ") = malloc(sizeof(*(this->" + n._name + ")));" for n in gen_klass._ctype.fields if n._name.startswith('__6vtable')])
-        + """
+                                 '\n'.join([
+                                               "this->" + n._name + " = malloc(sizeof(void*));\n *(this->" + n._name + ") = malloc(sizeof(*(this->" + n._name + ")));"
+                                               for n in gen_klass._ctype.fields if n._name.startswith('__6vtable')])
+                                 + """
             vtable = ((void*)this) - sizeof(void*);
             *vtable = malloc(sizeof(**vtable));
             """ + new_operator_mangler.name(methodDef._name).callable().type('void').params(
@@ -434,16 +440,19 @@ def fill_constructor(constructor: nodes.ConstructorImplementation, klass: nodes.
             for _override in override:
                 if _override["pre"] is True:
                     _overriding_table.insert(0, "vtable->{0} = &{1};".format(
-                        '___' + '___'.join([str(len(n)) + n for n in _override['name']]) + '__8callable__' + str(len(name)) + name,
+                        '___' + '___'.join([str(len(n)) + n for n in _override['name']]) + '__8callable__' + str(
+                            len(name)) + name,
                         vtable_init_mangler.callable().name(name).mangle()
                     ))
                 else:
                     _overriding_table.insert(0, "(*(this->{0}))->{1} = &{2};".format(
                         _override['vtable'],
-                        '___' + '___'.join([str(len(n)) + n for n in _override['name']]) + '__8callable__' + str(len(name)) + name,
+                        '___' + '___'.join([str(len(n)) + n for n in _override['name']]) + '__8callable__' + str(
+                            len(name)) + name,
                         vtable_init_mangler.callable().name(name).mangle()
                     ))
-    constructor.body.body = kooc.Kooc().parse("int main() {" + inner_vtable_init_for_virtuality_stringified + '\n'.join(_overriding_table) + "}").body[
+    constructor.body.body = kooc.Kooc().parse(
+        "int main() {" + inner_vtable_init_for_virtuality_stringified + '\n'.join(_overriding_table) + "}").body[
                                 0].body.body + constructor.body.body
     pass
 
@@ -452,11 +461,11 @@ def generate_override_table(self: nodes.Impl, klass: nodes.Class, ast, methods_p
     supers = []
     for parent_name in klass.parents:
         _super = ast.search_in_tree(lambda __super, _parents:
-                                         __super if type(__super) is nodes.Class
-                                                    and __super.class_name == parent_name.value
-                                                    and _parents == parent_name.scope else None)
+                                    __super if type(__super) is nodes.Class
+                                               and __super.class_name == parent_name.value
+                                               and _parents == parent_name.scope else None)
         generate_override_table(self, _super, ast, methods_pair, _override_table)
-        supers.append({"name": parent_name, "klass": _super}) #recurs to verif after eating time
+        supers.append({"name": parent_name, "klass": _super})  # recurs to verif after eating time
     for methodImpl in self.body:
         if methods_pair[methodImpl._name].accessibility.override is True:
             for it, _super in enumerate(supers):
@@ -467,7 +476,10 @@ def generate_override_table(self: nodes.Impl, klass: nodes.Class, ast, methods_p
                             _override_table[methodImpl._name] = []
                         _override_table[methodImpl._name].insert(0, {"vtable": '__6vtable__' + str(
                             len(klass.class_name)) + klass.class_name + '__' + str(
-                            len(_super["klass"].class_name)) + _super["klass"].class_name, "name": _super["name"].scope + [_super["name"].value], "pre": False if it > 0 else True})
+                            len(_super["klass"].class_name)) + _super["klass"].class_name,
+                                                                     "name": _super["name"].scope + [
+                                                                         _super["name"].value],
+                                                                     "pre": False if it > 0 else True})
     return _override_table
 
 
@@ -609,6 +621,7 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
         new_mangler.container(name)
     new_mangler.enable()
     self.call_expr.value = new_mangler.name('new').callable().mangle()
+    self.params = sub_resolution(self.params, ast, _mangler, parents)
     return self
 
 
@@ -619,6 +632,7 @@ def kooc_resolution(self: nodes.New, ast: cnorm.nodes.BlockStmt, _mangler: mangl
         new_mangler.container(name)
     new_mangler.enable()
     self.call_expr.value = new_mangler.name('delete').callable().mangle()
+    self.params = sub_resolution(self.params, ast, _mangler, parents)
     return self
 
 

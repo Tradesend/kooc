@@ -1,0 +1,37 @@
+#include <stdio.h>
+@import(game)
+
+@definition(game) {
+
+  @implementation(weapon) {
+
+    @constructor() {
+      printf("a weapon has been forged!\n");
+    }
+
+    @destructor() {
+      printf("a weapon has been destroyed!\n");
+    }
+
+    void	use() {
+      printf("*generic weapon sound*\n");
+    }
+  };
+
+  @implementation(peon) {
+
+    @constructor() {
+      printf("je suis un peon!\n");
+    }
+
+    @destructor() {
+      printf("je me meurs!\n");
+    }
+
+  };
+}
+
+
+int main() {
+  @delete(game@peon)( @new(game@peon)() );
+}

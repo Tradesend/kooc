@@ -1,0 +1,50 @@
+@namespace (game) {
+
+  @class weapon() {
+    @constructor()	@callable();
+    @destructor()	@callable(virtual);
+
+    void	use()	@callable(virtual);
+  };
+
+  @class sword(game@weapon) {
+    @constructor()	@callable();
+    @destructor()	@callable(override);
+
+    void	use()	@callable(override);    
+  };
+
+  @class dagger(game@weapon) {
+    @constructor()	@callable();
+    @destructor()	@callable(override);
+
+    void	use()	@callable(override);
+  };
+  
+  @class peon() {
+    @constructor() @callable();
+    @destructor() @callable(virtual);
+
+    game@weapon	weapon			@property();
+    void	set_weapon(game@weapon) @callable();
+
+    void	hit(const char* target) @callable(virtual);
+    void	talk()			@callable(virtual);
+  };
+
+  @class warrior (game@peon) {
+    @constructor() @callable();
+    @destructor() @callable(override);
+
+    void	hit(const char* target) @callable(override);
+    void	talk()			@callable(override);
+  };
+
+  @class rogue (game@peon) {
+    @constructor() @callable();
+    @destructor() @callable(override);
+
+    void	hit(const char* target) @callable(override);
+    void	talk()			@callable(override);
+  };
+}
