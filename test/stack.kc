@@ -2,25 +2,22 @@
 
 @definition(system) {
   @implementation(stack) {
-    char  *_type	@callable(get: public, set: public);
-    void  *_ptr		@callable(get: public, set: public);
-    system@stack *_next	@callable(get: public, set: public);
     @constructor(char *type, void *ptr) {
-      @set(system@stack@_type)(type);
-      @set(system@stack@_ptr)(ptr);
-      @set(system@stack@_next)(NULL);
+      @set(system@stack@_type)(this, type);
+      @set(system@stack@_ptr)(this, ptr);
+      @set(system@stack@_next)(this, NULL);
     };
 
     bool  push_back(char *type, void *ptr) {
-      system@stack *tmp = &system@stack;
+      system@stack *tmp = this;
       while (tmp)
-        tmp = tmp->_next;
-      tmp->_next = &system@stack(type, ptr);
+        tmp = @get(system@stack@_next)(this);
+      @set(system@stack@_next)(tmp, @new(system@stack)(type, ptr));
       return true;
     };
 
     bool  pop_back() {
-      system@stack *tmp = &system@stack;
+      system@stack *tmp = this;
       while (tmp && tmp->_next && tmp->_next->_next)
         tmp = tmp->_next;
       if (!tmp->_next)

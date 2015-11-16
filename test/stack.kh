@@ -1,9 +1,11 @@
 @namespace(system) {
   @class stack () {
-    char *_type @callable(call: public, set: public);
+    char *_type @property(set: public);
     char *_ptr  @callable(call: public, set: public);
     void *_next @callable(call: public, set: public);
+
     @constructor(char *type, void *ptr) @callable(call: public);
+
     int  push_back(char *type, void *ptr) @callable(call: public, virtual);
     int  pop_back() @callable(call: public, virtual);
   };
