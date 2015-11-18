@@ -6,7 +6,7 @@
       @set(system@stack@_type)(this, type);
       @set(system@stack@_ptr)(this, ptr);
       @set(system@stack@_next)(this, NULL);
-    };
+    }
 
     int  push_back(char *type, void *ptr) {
       system@stack *tmp = this;
@@ -14,7 +14,7 @@
         tmp = @get(system@stack@_next)(tmp);
       @set(system@stack@_next)(tmp, @new(system@stack)(type, ptr));
       return 0;
-    };
+    }
 
     int  pop_back() {
       system@stack *tmp = this;
@@ -24,6 +24,11 @@
         return 1;
       tmp->_next = NULL;
       return 0;
-    };
+    }
   };
-};
+}
+
+int main() {
+  char *ptr = "test";
+  system@stack *test = @new(system@stack)("char*", ptr);
+}

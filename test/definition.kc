@@ -7,7 +7,5 @@
 }
 
 int main() {
-    int toto;
-    toto = call(toto);
-    toto = @new(TITI)(toto);
+    int toto = NAMEPSACE@methode();
 }
