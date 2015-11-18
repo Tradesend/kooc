@@ -194,6 +194,8 @@
     These will be explained below. \newline
     We also dispose of a robust error management : forbid implementation when the previous definition is lacking, manage attributes and methods visibilities, nesting errors, missing constructors or destructors in a class. \newline
   \end{FeatureSection}
+\end{Feature}
+\clearpage
 
 %----------------------------------------------------------------------------------------
 %       Mangling
@@ -352,22 +354,22 @@
 
 \begin{Feature}[Vtable]
   \begin{FeatureSection}[What]
-    A Vtable is a virtual table where all pointer of attribute and virtual method are stored to be able to use them in our sublcass.
+    A Vtable is a virtual table where all pointer virtual methods are stored to be able to use them in our subclass. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
-    Whenever a class inherit from an another class we need to have the virtual table of this class.
-    To support inheritance we need to be able to use attribute and virtual method of the inherited class.
-    With inheritance and virtual method we can creat a complex code with less lines.
+    Whenever a class inherit from an another class we need to have the virtual table of this class. \newline
+    To support inheritance we need to be able to use virtual methods of the inherited class. \newline
+    With inheritance and virtual method we can create a complex code with less lines by avoiding code reuse. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
 %    \KoocCode{vtable}{ Inheritance demo in Kooc code }
 %    \CCode{vtable}{ Inheritance demo in Kooc code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    \includegraphics{simplevtable}
-    \includegraphics{multivtable}
+    \includegraphics{simplevtable} \newline
+    \includegraphics{multivtable} \newline
     We implemented this by allocating 8 Bytes before the class to store a pointer of a pointer on the vtable.
-    In simple inheritance we add the vtable of the inherited class to the class who inherite it.
+    In simple inheritance we add the vtable of the inherited class to the class who inherit it.
     In multiple inheritance we add the first class' vtable to the child class' vtable and the others class' vtable are added before their body.
   \end{FeatureSection}
 \end{Feature}
@@ -382,14 +384,14 @@
     An exception is meant to change the standard flow of the process in case where something went wrong.
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
-    Use exception to raise an error is usefull when something unexpected occured and you want to do something if this exception occured.
+    Use exception to raise an error is useful when something unexpected occured and you want to do something if this exception occured.
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
-%    \KoocCode{exception}{ Exception demo in Kooc code }
+    \KoocCode{exception}{ Exception demo in Kooc code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
     The definition of an exception is @throw(FUNCTION*)(VAR), and you can verify if an exception occured with @try\{\}. If an exception occured you may want to catch it with @catch(FUNCTION*)\{\}
-    We tried to implement it but time was short so we droped it to implement major functionnality.
+    We tried to implement it but time was short so we dropped it to implement major functionality.
   \end{FeatureSection}
 \end{Feature}
 \clearpage
