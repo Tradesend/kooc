@@ -1,23 +1,23 @@
-@class FileNotFoundException : Exception
-{
-  @member {
-    const char *msg;
-    void init(const char *);
-  }
-}
+#include <stdio.h>
 
-@implementation FileNotFoundException
-{
-  @member void init(const char *msg) {
-    [self.msg] = msg;
-  }
-}
+@implementation FileNotFoundException(Exception) {
+    @constructor() {
+
+    }
+    @destructor() {
+
+    }
+    const char *msg @prority(set: public, get: public);
+    void init(const char *) {
+      [self.msg] = msg;
+    }
+};
 
 FILE *OpenRead(char *filename) {
   FILE *f;
   f = fopen(filename, "r");
   if (!f)
-    @throw (FileNotFoundException*)("Fucking bastard!");
+    @throw (FileNotFoundException*)("No file.");
   return (f);
 }
 
