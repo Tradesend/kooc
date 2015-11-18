@@ -170,6 +170,32 @@
 \newpage
 
 %----------------------------------------------------------------------------------------
+%       Kooc
+%----------------------------------------------------------------------------------------
+
+\begin{Feature}[Kooc]
+  \begin{FeatureSection}[What]
+    The Kooc is an Epitech project. It's purpose is to design an Object Oriented Language, and create a compiler able to compile our language, and translate it into functional C. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Technologies]
+    The compiler will be written in Python. It will use the modules Pyrser (to parse the language) and Cnorm (to parse C, and digest our code into C). \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    The compiler will work in two steps : \newline
+    * First, it will parse the file, recursively including any needed files (\.kh) precised by an \@ import directive. This file will construct what we call an Abstract Syntax Tree (AST) accord to the parsing rules. This AST is made of multiples layers of Nodes, each with its own definition, properties and datas. Since the compiler is able to parse both a pure C code, and a mixed C/KOOC code, we decided by design to add our own parsing rules and nodes (as to avoid collisions with Cnorm) on top of Cnorm. \newline
+    * Second, we will recursively go through our AST : if a C node is found, it is processed according to Cnorm. But if one of our own nodes is found, it will then be resolved according to our own methods, and translated into an appropriate block of C nodes. The Kooc node is then removed from the AST. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implemented]
+    As of now, what is currently implemented ? \newline \newline
+
+
+    We have a functional mangler, import, namespaces, classes with linear and multiple inheritances. \newline
+    We thought about type inference, polymorphism, exceptions, but these are, at best, only partly implemented. \newline
+    These will be explained below. \newline
+    We also dispose of a robust error management : forbid implementation when the previous definition is lacking, manage attributes and methods visibilities, nesting errors, missing constructors or destructors in a class. \newline
+  \end{FeatureSection}
+
+%----------------------------------------------------------------------------------------
 %       Mangling
 %----------------------------------------------------------------------------------------
 
@@ -180,9 +206,9 @@
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
       We needed to solve unique name resolution to be able to create a C oriented object. \newline
-      When you create a Class in cpp you'r going to set variable and methode in it, if we want to simulate this we need to tell in c that a function is only callable by the struct. \newline
+      When you create a Class in cpp you're going to set variables and methods in it, if we want to simulate this we need to tell in C that a function is only callable by the object. \newline
       The solution for this is to change the function name to className\_functionName. \newline
-      The function can in fact still be called by the user. This is why we obfuscate the name. \newline
+      The function can in fact still be called by the user. This is why we obfuscate the name : to reduce risks of collisions. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{mangling}{ various examples in Kooc }
@@ -191,10 +217,14 @@
   \begin{FeatureSection}[Implementation]
     \_\_\_[\{nb\}NAMESPACE\_\_]*[\{nb\}CLASS\_\_]?\{nb\}SYMTYPE\_\_\{nb\}SYMNAME[\_\_[\{nb\}TYPARG\_\_]*\{nb\}RETTYPE]?\_\_ \newline
     \{nb\} = len(word) \newline
-    When we mangle we add \_\_\_ as separator at the begining and \_\_ between informations, before all informations we tell the lenght of the information. \newline
-    We mangle with all the namespaces, the class if present. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. \newline
+    When we mangle we add \_\_\_ as separator at the begining and \_\_ between informations, before all informations we tell the length of the information's string. \newline
+    We mangle with all the namespaces, the class if present, and the type. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. \newline
     Then, if it's a function, we also mangle with every argument's type, and the return type. \newline
     This is implemented by a Class who have for purpose to change the variable name like the previous declaration. \newline
+    To be noted : a mangling by type of arguments/type of the variable is implemented (for type inference purpose) but desactivated, as the functionality is not complete. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Note]
+    Note : further examples will use \'\'MANGLED_\'\' instead of our real mangling, for the sake of lisibility. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -215,9 +245,8 @@
     \CCode{import}{ Import translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    To implement this we created a custom node (Imp). \newline
-    We pars the statement to change it to a correct C \#include. \newline
-    This node is not a part of our work tree and only implement a new meta to C methods. \newline
+    To implement this we created a custom node (Imp). When this node is found, we add it in our AST. \newline
+    When resolving our newly created AST, for each Imp node encountered, we will replace it by a normal \#include, encapsulated by define/ifndef directives, and remove this node from the AST. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -228,7 +257,7 @@
 
 \begin{Feature}[Namespace]
   \begin{FeatureSection}[What]
-    The purpose of a namespace is to define sub context for declaration of variables and functions. \newline
+    The purpose of a namespace is to define sub context for declaration of variables and functions. One of the common objective of namespace is to reduce the risk of naming collisions, and permit a new layer of logic isolation. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
     To be able to use our languague as an object oriented languague we needed to add a Namespace declaration. \newline
@@ -241,7 +270,9 @@
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
     The definition of a namespace (called 'module' in the subject) is @namespace(NAME)\{\}, and its implementation is @definition(NAME)\{\} \newline
-    We implemented this by detecting Namespace declaration (@definition) and added a node to do all mangling and operation of transformation for a Namespace declaration. \newline
+    We implemented this by detecting Namespace declaration (@definition) and added a node in our AST. \newline
+    When encountered, this node tells us to do all the mangling and operation of transformation for a Namespace declaration. We then remove this node from the AST. \newline
+    As of now, nested namespaces is possible and functional. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -252,7 +283,7 @@
 
 \begin{Feature}[Class]
   \begin{FeatureSection}[What]
-    A class is an object containing variables and methods. Inheritance and polymorphism is a possibility of classes. \newline
+    A class is an object containing variables and methods. Linear and Multiple Inheritance is a possibility of classes. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
     To be able to use our languague as an object oriented languague we needed to add a Class declaration. \newline
@@ -265,12 +296,59 @@
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
     The definition of a class is @class(NAME)\{\}, and its implementation is @implementation(NAME)\{\} \newline
-    Methodes can be private or public and can be set to be virtual or override. \newline
-    Attribute can be set private or public. \newline
-    Like the previous implementation of Namespace we created a node to do the specific mangling and transformation of the code. \newline
+    Like the previous implementation of Namespace, we created a node to do the specific mangling and transformation of the code. \newline
+    Methods can be private or public and can be set to virtual or override. Attributes can be set private, public or public. This will be explained below. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
+
+%----------------------------------------------------------------------------------------
+%	Properties, Visibilities
+%----------------------------------------------------------------------------------------
+
+\begin{Feature}[Properties and Visibilities]
+  \begin{FeatureSection}[What]
+    In our class, we can add properties to methods and visibilities to both methods and attributes. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Why]
+    Those properties and visibilities are key to both respect encapsulation and virtuality, key principles in an object oriented language. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    Those additionals informations are added inside our class nodes, used in the resolve process (to verify if a future use isn\'t forbidden), and then removed along the node. \newline
+    For visibility, you can set it to public (everyone can use it), protected (only classes inheriting it can use it), or private (only the current class can use it). Visibility can be applied to methods and attributes.
+    For inheritance properties, you can set it to none (a normal method), virtual (say than this method will be overrided), or override (this override a parent class\' method precised as virtual). \newline
+  \end{FeatureSection}
+\end{Feature}
+\clearpage
+
+%----------------------------------------------------------------------------------------
+%	Linear And Multi Inheritance
+%----------------------------------------------------------------------------------------
+
+\begin{Feature}[Linear and Multi Inheritance]
+  \begin{FeatureSection}[What]
+    Inheritance is the principle of extending a \'\'Child class\'\' with the methods and attributes of a \'\'Parent class\'\', and then manipulate a Child class as you would manipulate a Parent class. \newline
+    Linear Inheritance is when your object have one Parent maximum. \newline
+    Multi Inheritance is when your object have more than one Parent. In this case, some problems appear. The most infamous problem is the \'\'Diamond\'\', where your child class A inherit from both classes B and C, and both of them inherit from the same class D : How to know which methods to use ? \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Research]
+    We haved researched a lot of differents implementations of what we consider multi Inheritance. \newline
+    Since our implementation is based on C++, we will explain it below. \newline
+    In Python, it is done by linearizing the inheritance : When a Child class A inherits from classes B, C and D simultaneously, Python creates temporary classes : tmpC inherited from D, tmpB inherited from tmpC, and A inherited from tmpB. To do so, it will call the MRO Algorithm, resolving both parent inheritances in B, C and D and forbid Diamonds. Since we don\'t have polymorphism, using a Python-like multi inheritance is impossible. Typically in Python, if a class inherit from B, C and D (and all of them implements a Foo method), and because you inherit from D, then from C, then from B, when you call Foo, you will use Foo of B.\newline
+    In some languages, parent classes are replaced by Mixins, or Traits. Classes will \'\'include\'\' Mixins\' code, rather than \'\'inherit from it\'\'. Mixins can be seen as interfaces containing implemented methods : it doesnt have an identity by itself, and as such a child class \'\'including\'\' code from a Mixin CANT be used as a Mixin instance, since a Mixin has no instance. Traits and Mixins are different only in the way of handling multi inheritances : Mixins explicitly forbid it, where Traits have ways to implement it (depends on the language). We didnt implement Mixins nor Traits because both us and the subject judged it as too restrictive.\newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    We decided to implement a C++-like inheritance, where we copy all the attributes and methods from the parent(s) into the child class. \newline
+    Like C++, we also manage a Virtual Table. This will be explained below. \newline
+    With our implementation, a Diamond problem will output an error (because both class inheriting from the same class will contain the same attributes, and we don\'t manage it) OR use the method from the first inherited class in our child class (when there is no attributes conflicts, and because we search for the first valid implementation of asked class). \newline
+    Unlike some languages (Java, ...) we don\'t have an \'\'Origin\'\' class, which is inherited by all existing objects. \newline
+  \end{FeatureSection}
+\end{Feature}
+\clearpage
+
+%----------------------------------------------------------------------------------------
+%	Vtable
+%----------------------------------------------------------------------------------------
 
 %----------------------------------------------------------------------------------------
 
