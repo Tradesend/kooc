@@ -1,6 +1,7 @@
 @namespace (game) {
 
   @class weapon() {
+    char *_type @property(set: public);
     @constructor()      @callable();
     @destructor()       @callable(virtual);
 
