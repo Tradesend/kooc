@@ -175,25 +175,24 @@
 
 \begin{Feature}[Mangling]
   \begin{FeatureSection}[What]
-    Mangling is a technique used to avoid many problem on unique names resolution. \newline
+    Mangling/Name Mangling is a technique used to avoid many problem on unique names resolution. \newline
     Mangling will modify the name following some pattern in order to avoid name collisions.
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
-      Mangling is our solution to simulate a cpp code in a c code. \newline
-      When you create a class in cpp you'r going to set variable and methode in it, if we want to simulate this we need to tell in c that a function is only callable by the struct. The solution for this is to change the function name to className_functionName. \newline
+      We needed to solve unique name resolution to be able to create a C oriented object. \newline
+      When you create a Class in cpp you'r going to set variable and methode in it, if we want to simulate this we need to tell in c that a function is only callable by the struct. The solution for this is to change the function name to className_functionName. \newline
       The function can in fact still be called by the user. This is why we obfuscate the name.
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{mangling}{ various examples in Kooc }
     \CHeader{mangling}{ various examples in C }
-    Like you can see in this example the name of the variable/function change from \"int NAME\" to \"int ___8variable__3int__4NAME\" this is our mangling. \newline
-    For the purpose of compatibility in variable name we put 3 underscore at the begining of the variable name, after this we tell if it's a variable or a function and to be sure there is no probleme in our parsing we tell the number of caracters. \newline
-    We keep in our parsing the type of the variable and like you can see we use __ for separator to keep our parsing clear and easy to read. In the last part we tell the lenght and the name of the variable we have mangled.
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
     \_\_\_[\{nb\}NAMESPACE\_\_]*[\{nb\}CLASS\_\_]?\{nb\}SYMTYPE\_\_\{nb\}SYMNAME[\_\_[\{nb\}TYPARG\_\_]*\{nb\}RETTYPE]?\_\_ \newline
     \{nb\} = len(word) \newline
+    When we mangle we add ___ as separator at the begining and __ between informations, before all informations we tell the lenght of the information.
     We mangle with all the namespaces, the class if present. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. Then, if it's a function, we also mangle with every argument's type, and the return type.
+    This is implemented by a Class who have for purpose to change the variable name like the previous declaration.
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -204,14 +203,19 @@
 
 \begin{Feature}[Import]
   \begin{FeatureSection}[What]
-    To support the use of import in our kooc we use an @Import Statement for safe inclusion.
+    To support the use of import in our kooc we use an @Import Statement for safe inclusion. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Why]
+    We needed to be able to include header in our languague so we used @Import as statement to simulate the #include.
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocCode{import}{ Import demo in Kooc code }
     \CCode{import}{ Import translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    No work on tree, only implemented new meta to C methods on a custom Imp node. \newline
+    To implement this we created a custom node (Imp). \newline
+    We pars the statement to change it to a correct C #include. \newline
+    This node is not a part of our work tree and only implement a new meta to C methods. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -222,7 +226,10 @@
 
 \begin{Feature}[Namespace]
   \begin{FeatureSection}[What]
-    The purpose of a namespace is to define sub context for declaration of variables, functions
+    The purpose of a namespace is to define sub context for declaration of variables and functions. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Why]
+    To be able to use our languague as an object oriented languague we needed to add a Namespace declaration. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{namespace}{ Namespace demo in Kooc header }
@@ -231,7 +238,8 @@
     \CCode{namespace}{ Namespace translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    The definition of a namespace (called 'module' in the subject) is @namespace(NAME)\{\}, and its implementation is @definition(NAME)\{\}
+    The definition of a namespace (called 'module' in the subject) is @namespace(NAME)\{\}, and its implementation is @definition(NAME)\{\} \newline
+    We implemented this by detecting Namespace declaration (@definition) and added a node to do all mangling and operation of transformation for a Namespace declaration. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -242,7 +250,10 @@
 
 \begin{Feature}[Class]
   \begin{FeatureSection}[What]
-    A class is an object containing variables and methods. Inheritance and polymorphism is a possibility of classes.
+    A class is an object containing variables and methods. Inheritance and polymorphism is a possibility of classes. \newline
+  \end{FeatureSection}
+  \begin{FeatureSection}[Why]
+    To be able to use our languague as an object oriented languague we needed to add a Class declaration. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{class}{ Class demo in Kooc header }
@@ -251,24 +262,9 @@
     \CCode{class}{ Class translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
-    The definition of a class is @class(NAME)\{\}, and its implementation is @implementation(NAME)\{\}
-  \end{FeatureSection}
-\end{Feature}
-\clearpage
-
-%----------------------------------------------------------------------------------------
-%	Exception
-%----------------------------------------------------------------------------------------
-
-\begin{Feature}[Exception]
-  \begin{FeatureSection}[What]
-    An exception is meant to change the standard flow of the process in case where something went wrong.
-  \end{FeatureSection}
-  \begin{FeatureSection}[Code Equivalence]
-    \KoocCode{exception}{ Class demo in Kooc code }
-  \end{FeatureSection}
-  \begin{FeatureSection}[Implementation]
-    The definition of an exception is @throw(FUNCTION*)(VAR), and you can verify if an exception occured with @try\{\}. If an exception occured you may want to catch it with @catch(FUNCTION*)\{\}
+    The definition of a class is @class(NAME)\{\}, and its implementation is @implementation(NAME)\{\} \newline
+    Methodes and variable
+    Like the previous implementation of Namespace we created a node to do the specific mangling and transformation of the code. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
