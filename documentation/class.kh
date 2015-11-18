@@ -1,20 +1,16 @@
-@class Point() { ... }
+@namespace (game) {
 
-@class Rectangle()
-  {
-    Point topLeftCorner @access(get:public, set:public);
-    int width @access(); /* default=> get:public, set:private */
-    int height @access();
+  @class weapon() {
+    @constructor()      @callable();
+    @destructor()       @callable(virtual);
 
-    @ctor(int, int, int, int) @access(); // default=> public
-    @ctor(Point, int, int) @access(private);
+    void        use()   @callable(virtual);
+  };
 
-    @dtor() @access();
+  @class sword(game@weapon) {
+    @constructor()      @callable();
+    @destructor()       @callable(override);
 
-    Point findMiddle() @access(public, static);
-  }
-
-@class Carre(Rectangle)
-{
-  @ctor(int, int int) @();
+    void        use()   @callable(override);
+  };
 }
