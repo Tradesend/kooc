@@ -1,17 +1,28 @@
-@namespace (game) {
+@namespace(n) {
+    @class a() {
+        @constructor()       @callable();
+        @destructor()       @callable(virtual);
 
-  @class weapon() {
-    char *_type @property(set: public);
-    @constructor()      @callable();
-    @destructor()       @callable(virtual);
+        int a               @property();
+    };
+    @class ap() {
+        @constructor()       @callable();
+        @destructor()       @callable(virtual);
 
-    void        use()   @callable(virtual);
-  };
+        int a               @property();
+    };
+    @class b(n@a, n@ap) {
+        @constructor()       @callable();
+        @destructor()       @callable(override);
 
-  @class sword(game@weapon) {
-    @constructor()      @callable();
-    @destructor()       @callable(override);
+        void    methode()   @callable(virtual);
 
-    void        use()   @callable(override);
-  };
-}
+        int b               @property();
+    };
+    @class c(n@b) {
+        @constructor()       @callable();
+        @destructor()       @callable(override);
+
+        void    methode()   @callable(override);
+    };
+};

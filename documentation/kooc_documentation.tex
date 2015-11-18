@@ -44,7 +44,7 @@
         keywordstyle=[1]\color{Blue}\bf, % Perl functions bold and blue
         keywordstyle=[2]\color{Purple}, % Perl function arguments purple
         keywordstyle=[3]\color{Blue}\underbar, % Custom functions underlined and blue
-        identifierstyle=, % Nothing special about identifiers                                         
+        identifierstyle=, % Nothing special about identifiers
         commentstyle=\usefont{T1}{pcr}{m}{sl}\color{MyDarkGreen}\small, % Comments small dark green courier font
         stringstyle=\color{Purple}, % Strings are purple
         showstringspaces=false, % Don't put marks in string spaces
@@ -67,12 +67,12 @@
 }
 
 % Creates a new command to include a perl script, the first parameter is the filename of the script (without .pl), the second parameter is the caption
-\newcommand{\KoocCode}[2]{ 
+\newcommand{\KoocCode}[2]{
   \begin{itemize}
   \item[]\lstinputlisting[caption=#2,label=#1]{#1.kc}
   \end{itemize}
 }
-\newcommand{\KoocHeader}[2]{ 
+\newcommand{\KoocHeader}[2]{
   \begin{itemize}
   \item[]\lstinputlisting[caption=#2,label=#1]{#1.kh}
   \end{itemize}
@@ -176,12 +176,13 @@
 \begin{Feature}[Mangling]
   \begin{FeatureSection}[What]
     Mangling/Name Mangling is a technique used to avoid many problem on unique names resolution. \newline
-    Mangling will modify the name following some pattern in order to avoid name collisions.
+    Mangling will modify the name following some pattern in order to avoid name collisions. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
       We needed to solve unique name resolution to be able to create a C oriented object. \newline
-      When you create a Class in cpp you'r going to set variable and methode in it, if we want to simulate this we need to tell in c that a function is only callable by the struct. The solution for this is to change the function name to className_functionName. \newline
-      The function can in fact still be called by the user. This is why we obfuscate the name.
+      When you create a Class in cpp you'r going to set variable and methode in it, if we want to simulate this we need to tell in c that a function is only callable by the struct. \newline
+      The solution for this is to change the function name to className\_functionName. \newline
+      The function can in fact still be called by the user. This is why we obfuscate the name. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{mangling}{ various examples in Kooc }
@@ -190,9 +191,10 @@
   \begin{FeatureSection}[Implementation]
     \_\_\_[\{nb\}NAMESPACE\_\_]*[\{nb\}CLASS\_\_]?\{nb\}SYMTYPE\_\_\{nb\}SYMNAME[\_\_[\{nb\}TYPARG\_\_]*\{nb\}RETTYPE]?\_\_ \newline
     \{nb\} = len(word) \newline
-    When we mangle we add ___ as separator at the begining and __ between informations, before all informations we tell the lenght of the information.
-    We mangle with all the namespaces, the class if present. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. Then, if it's a function, we also mangle with every argument's type, and the return type.
-    This is implemented by a Class who have for purpose to change the variable name like the previous declaration.
+    When we mangle we add \_\_\_ as separator at the begining and \_\_ between informations, before all informations we tell the lenght of the information. \newline
+    We mangle with all the namespaces, the class if present. Symtype makes the difference between a function or a variable. Symname is the name given to this symbol. \newline
+    Then, if it's a function, we also mangle with every argument's type, and the return type. \newline
+    This is implemented by a Class who have for purpose to change the variable name like the previous declaration. \newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
@@ -206,7 +208,7 @@
     To support the use of import in our kooc we use an @Import Statement for safe inclusion. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Why]
-    We needed to be able to include header in our languague so we used @Import as statement to simulate the #include.
+    We needed to be able to include header in our languague so we used @Import as statement to simulate the \#include.
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocCode{import}{ Import demo in Kooc code }
@@ -214,7 +216,7 @@
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
     To implement this we created a custom node (Imp). \newline
-    We pars the statement to change it to a correct C #include. \newline
+    We pars the statement to change it to a correct C \#include. \newline
     This node is not a part of our work tree and only implement a new meta to C methods. \newline
   \end{FeatureSection}
 \end{Feature}
@@ -257,13 +259,14 @@
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
     \KoocHeader{class}{ Class demo in Kooc header }
-    \CHeader{class}{ Class translation in C header }
+    %% \CHeader{class}{ Class translation in C header }
     \KoocCode{class}{ Class demo in Kooc code }
-    \CCode{class}{ Class translation in C code }
+    %% \CCode{class}{ Class translation in C code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
     The definition of a class is @class(NAME)\{\}, and its implementation is @implementation(NAME)\{\} \newline
-    Methodes and variable
+    Methodes can be private or public and can be set to be virtual or override. \newline
+    Attribute can be set private or public. \newline
     Like the previous implementation of Namespace we created a node to do the specific mangling and transformation of the code. \newline
   \end{FeatureSection}
 \end{Feature}

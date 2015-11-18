@@ -1,36 +1,55 @@
-@implementation(Rectangle) {
-  @ctor(int tl1, int tl2, int w, int h) {
-    @set(@this, topLeftCorner, @new(Point)(tl1, tl2));
-    @set(@this, width, w);
-    @set(@this, height, h);    
-  }
+#include <stdio.h>
+@import(class)
 
-  @ctor(Point tl, int w, int h) {
-    @set(@this, topLeftCorner, tl);
-    @set(@this, width, w);
-    @set(@this, height, h);    
-  }
+@definition(n) {
+    @implementation(a) {
+        @destructor() {
 
-  @dtor() {
-  }
+        }
+        @constructor() {
 
-  Point findMiddle() {
-    return (@new(Point)(@get(tl, x) + @get(@this, w / 2),
-                        @get(tl, y) + @get(@this, h / 2)
-                       ));
-  }
-}
+        }
+    };
+    @implementation(ap) {
+        @destructor() {
 
-@implementation(Carre) {
-  @ctor(int tl1, int tl2, int side) {
-    @super(tl1, tl2, side, side);
-  }
+        }
+        @constructor() {
+
+        }
+    };
+    @implementation(b) {
+        @constructor() {
+
+        }
+
+        @destructor() {
+
+        }
+
+        void    methode() {
+            printf("i'm a b\n");
+        }
+    };
+    @implementation(c) {
+        @constructor() {
+
+        }
+
+        @destructor() {
+
+        }
+
+        void    methode() {
+            printf("i'm a c\n");
+        }
+    };
 }
 
 int main() {
-  Rectangle rec = @new(Rectangle)(42, 42, 42, 24);
-  Point corner = @get(rec, topLeftCorner);
-  Point mid = @call(@call(rec, findMiddle()), clonePoint());
-  @set(rec, topLeftCorner, mid);
-  @delete(Rectangle)(rec);  
+    n@c c_object = @new(n@c)();
+    n@a a_object =(n@a)c_object;
+
+    @get(n@a@a)(c_object);
+    @call(n@b@methode)(c_object);
 }
