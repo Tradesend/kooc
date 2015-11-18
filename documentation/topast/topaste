@@ -1,0 +1,56 @@
+%----------------------------------------------------------------------------------------
+%	Exception
+%----------------------------------------------------------------------------------------
+
+\begin{Feature}[Exception]
+  \begin{FeatureSection}[What]
+    An exception is meant to change the standard flow of the process in case where something went wrong.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Why]
+    Use exception to raise an error is usefull when something unexpected occured and you want to do something if this exception occured.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Code Equivalence]
+    \KoocCode{exception}{ Class demo in Kooc code }
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    The definition of an exception is @throw(FUNCTION*)(VAR), and you can verify if an exception occured with @try\{\}. If an exception occured you may want to catch it with @catch(FUNCTION*)\{\}
+    We tried to implement it but time was short so we droped it to implement major functionnality.
+  \end{FeatureSection}
+\end{Feature}
+\clearpage
+
+%----------------------------------------------------------------------------------------
+%	VTABLE
+%----------------------------------------------------------------------------------------
+
+Différencier lineaire du multiple heritage.
+Lineaire : vtable cree avant pointeur de l'objet.
+Cette vtable va pointer sur une struct dyn allouée. Struct contient pointeurs vers les méthodes virtuelles/ovveriding
+Appels resolus : quand m virtu creee, m callable cree a côte. ==> La vtable va chercher la callable. Utile seulement danss cas heritage.
+Dans multi heritage : Mheritage = integrer body d'au dessus chez toi. Par couche : vtable du 1er va etre integree, puis vtable du deuxieme integree dans le body du 2eme
+
+
+\begin{Feature}[Vtable]
+  \begin{FeatureSection}[What]
+    A Vtable is a virtual table where all pointer of attribute and virtual method are stored to be able to use them in our sublcass.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Why]
+    Whenever a class inherit from an another class we need to have the virtual table of this class.
+    To support inheritance we need to be able to use attribute and virtual method of the inherited class.
+    With inheritance and virtual method we can creat a complex code with less lines.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Code Equivalence]
+    \KoocCode{vtalbe}{ Class demo in Kooc code }
+    \CCode{vtalbe}{ Class demo in Kooc code }
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    \includegraphics{simplevtable}
+    \includegraphics{multivtable}
+    We implemented this by allocating 8 Bytes before the class to store a pointer of a pointer on the vtable.
+    In simple inheritance we add the vtable of the inherited class to the class who inherite it.
+    In multiple inheritance we add the first class' vtable to the child class' vtable and the others class' vtable are added before their body.
+  \end{FeatureSection}
+\end{Feature}
+\clearpage
+
+%----------------------------------------------------------------------------------------
