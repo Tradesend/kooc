@@ -317,9 +317,6 @@
     Those additionals informations are added inside our class nodes, used in the resolve process (to verify if a future use isn\'t forbidden), and then removed along the node. \newline
     For visibility, you can set it to public (everyone can use it), protected (only classes inheriting it can use it), or private (only the current class can use it). Visibility can be applied to methods and attributes.
     For inheritance properties, you can set it to none (a normal method), virtual (say than this method will be overrided), or override (this override a parent class\' method precised as virtual). \newline
-  \end{FeatureSection}
-\end{Feature}
-\clearpage
 
 %----------------------------------------------------------------------------------------
 %	Linear And Multi Inheritance
@@ -351,5 +348,20 @@
 %----------------------------------------------------------------------------------------
 
 %----------------------------------------------------------------------------------------
+%	Exception
+%----------------------------------------------------------------------------------------
+
+\begin{Feature}[Exception]
+  \begin{FeatureSection}[What]
+    An exception is meant to change the standard flow of the process in case where something went wrong.
+  \end{FeatureSection}
+  \begin{FeatureSection}[Code Equivalence]
+    \KoocCode{exception}{ Class demo in Kooc code }
+  \end{FeatureSection}
+  \begin{FeatureSection}[Implementation]
+    The definition of an exception is @throw(FUNCTION*)(VAR), and you can verify if an exception occured with @try\{\}. If an exception occured you may want to catch it with @catch(FUNCTION*)\{\}
+  \end{FeatureSection}
+\end{Feature}
+\clearpage
 
 \end{document}
