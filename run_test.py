@@ -9,8 +9,10 @@ def main(av):
 
 def koocinator(path):
     cmd = ['python3', '__main__.py', path]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
+    if err:
+        sys.exit(err.decode('utf-8'))
     fname, ext = path.split('.')
     if ext == 'kc':
         fname += '.c'
