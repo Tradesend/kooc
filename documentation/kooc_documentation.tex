@@ -362,15 +362,23 @@
     With inheritance and virtual method we can create a complex code with less lines by avoiding code reuse. \newline
   \end{FeatureSection}
   \begin{FeatureSection}[Code Equivalence]
-%    \KoocCode{vtable}{ Inheritance demo in Kooc code }
-%    \CCode{vtable}{ Inheritance demo in Kooc code }
+    \KoocHeader{simpleVtable}{ Simple Inheritance demo in Kooc header }
+    \CHeader{simpleVtable} { Simple Inheritance demo in c header }
+    \KoocCode{simpleVtable}{ Simple Inheritance demo in Kooc code }
+    \CCode{simpleVtable}{ Simple Inheritance demo in c code }
+    \KoocHeader{complexVtable}{ Multiple Inheritance demo in Kooc header }
+    \CHeader{complexVtable} { Multiple Inheritance demo in C header }
+    \KoocCode{complexVtable}{ Multiple Inheritance demo in Kooc code }
+    \CCode{complexVtable}{ Multiple Inheritance demo in c code }
   \end{FeatureSection}
   \begin{FeatureSection}[Implementation]
+    How we did it in memory for simple inheritance (@class b(a)) \newline
     \includegraphics{simplevtable} \newline
+    How we did it in memory for multiple inheritance (@class ab(a,b)) \newline
     \includegraphics{multivtable} \newline
-    We implemented this by allocating 8 Bytes before the class to store a pointer of a pointer on the vtable.
-    In simple inheritance we add the vtable of the inherited class to the class who inherit it.
-    In multiple inheritance we add the first class' vtable to the child class' vtable and the others class' vtable are added before their body.
+    We implemented the vtable by allocating 8 Bytes before the class to store a pointer of a pointer on the vtable. \newline
+    In simple inheritance we add the vtable of the inherited class to the class who inherit it. \newline
+    In multiple inheritance we add the first class' vtable to the child class' vtable and the others class' vtable are added before their body.\newline
   \end{FeatureSection}
 \end{Feature}
 \clearpage
